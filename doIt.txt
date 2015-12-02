@@ -1,0 +1,6 @@
+int bob = (10 + 10)
+int garry = (20 + 20)
+int mormon = ((bob + garry) * (2))
+int fish = (bob + 20)
+Console.print (fish)
+Console.print (mormon + 1)
