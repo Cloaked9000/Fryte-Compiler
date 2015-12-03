@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <map>
+#include <algorithm>
 
 //List of instructions supported by the VM
 enum Instruction
@@ -22,6 +23,7 @@ enum Instruction
     MATH_DIVIDE = 10, //Divides two or more numbers. MATH_DIVIDE(NumberOfThingsToAdd, data1, data2, etc)
     MATH_MOD = 11, //Modulus two or more things. MATH_MOD(NumberOfThingsToAdd, data1, data2, etc)
     CLONE_TOP = 12, //Clones a variable's contents from a position in the stack to the top of the stack. CLONE_TOP(StackPos)
+    CONCENTRATE_STRINGS = 13, //Concentrates strings together into a new string. CONCENTRATE_STRINGS(NumberOfStrings)
 };
 
 //List of data types which the virtual machine supports
@@ -46,9 +48,12 @@ class Compiler
         int stringToInstruction(const std::string &operation); //Converts for example '+' into Instruction::MATH_ADD
         DataType stringToDataType(const std::string &type); //Converts for example "int" into DataType::INT
         void extractBracket(std::string bracket, std::vector<std::string> &results);
-        void bracketToBytecode(std::string bracket);
+
         std::string bracketOperatorFix(const std::string &data);
-        void compileBracket(const std::string &bracket);
+        void compileBracket(const std::string &bracket); //Converts a bracket into bytecode
+        void compileStringBracket(const std::string &bracket); //Converts a string bracket into bytecode
+        void compileIntBracket(const std::string &bracket); //Converts an int bracket into bytecode
+        unsigned int bracketToStackPosition(const std::string &bracket); //Converts a single variable bracket into a stack position.
 
         struct Variable
         {

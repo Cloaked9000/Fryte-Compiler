@@ -5,21 +5,23 @@
 
 using namespace std;
 
-#include "ConsoleMenu.h"
 #include "BytecodeIO.h"
 #include "Parser.h"
 #include "Compiler.h"
 
-int main()
+int main(int argc, char *argv[])
 {
+    if(argc < 3)
+        return -1;
+
     Parser parser;
     Compiler compiler;
 
     std::vector<std::string> sourceData;
     std::vector<unsigned char> compiledBytecode;
-
-    parser.parseFile("doIt.txt", sourceData);
-
+    std::cout << "\nParsing... ";
+    parser.parseFile(argv[1], sourceData);
+    std::cout << "\nCompiling... ";
     try
     {
         compiledBytecode = compiler.compileSource(sourceData);
@@ -33,6 +35,6 @@ int main()
         std::cout << "\nException: " << e.what();
     }
 
-    BytecodeIO::writeBytecode("out.fry", &compiledBytecode);
+    BytecodeIO::writeBytecode(argv[2], &compiledBytecode);
     return 0;
 }
