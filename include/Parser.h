@@ -1,22 +1,24 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <fstream>
+#include <iostream>
 #include <vector>
 #include <string>
-#include <iostream>
+#include <map>
+
+#include "VMTypes.h"
 
 class Parser
 {
     public:
-        /** Default constructor */
         Parser();
-        /** Default destructor */
         virtual ~Parser();
-
-        bool parseFile(const std::string &filepath, std::vector<std::string> &data);
+        void tokenizeFile(std::vector<std::string> &data_in, std::vector<std::vector<std::string>> &data_out);
+        std::string bracketOperatorFix(const std::string &data);
+        void extractBracket(std::string bracket, std::vector<std::string> &results);
     protected:
     private:
+        std::vector<unsigned char> seperatorTokens;
 };
 
 #endif // PARSER_H

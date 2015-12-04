@@ -14,7 +14,7 @@ public:
 
     static bool writeBytecode(const std::string &filepath, const std::vector<unsigned char> *byteCode);
     static bool readBytecode(const std::string &filepath, std::vector<unsigned char> *byteCode);
-
+    static bool readFile(const std::string &filepath, std::vector<std::string> &data);
 protected:
 private:
 };

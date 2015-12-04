@@ -50,3 +50,17 @@ bool BytecodeIO::writeBytecode(const std::string& filepath, const std::vector<un
     file.close();
     return true;
 }
+
+bool BytecodeIO::readFile(const std::string& filepath, std::vector<std::string> &data)
+{
+    std::ifstream file(filepath);
+    if(!file.is_open())
+        return false;
+
+    std::string buffer;
+    while(std::getline(file, buffer))
+        data.emplace_back(buffer);
+
+    file.close();
+    return true;
+}

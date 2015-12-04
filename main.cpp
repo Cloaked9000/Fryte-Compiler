@@ -1,40 +1,20 @@
 #include <iostream>
+#include <vector>
 #include <string>
-#include <limits>
-#include <map>
+
+#include "Parser.h"
+#include "BytecodeIO.h"
+#include "Compiler.h"
 
 using namespace std;
 
-#include "BytecodeIO.h"
-#include "Parser.h"
-#include "Compiler.h"
-
-int main(int argc, char *argv[])
+int main()
 {
-    if(argc < 3)
+    std::vector<std::string> data;
+    if(!BytecodeIO::readFile("file.txt", data))
         return -1;
 
-    Parser parser;
     Compiler compiler;
-
-    std::vector<std::string> sourceData;
-    std::vector<unsigned char> compiledBytecode;
-    std::cout << "\nParsing... ";
-    parser.parseFile(argv[1], sourceData);
-    std::cout << "\nCompiling... ";
-    try
-    {
-        compiledBytecode = compiler.compileSource(sourceData);
-    }
-    catch(const std::string &e)
-    {
-        std::cout << "\nError: " << e;
-    }
-    catch(const std::exception &e)
-    {
-        std::cout << "\nException: " << e.what();
-    }
-
-    BytecodeIO::writeBytecode(argv[2], &compiledBytecode);
+    compiler.compile(data);
     return 0;
 }
