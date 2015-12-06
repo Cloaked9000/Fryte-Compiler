@@ -1,1 +1,1 @@
-Console.print ("How to do stuff")
+Console.print ("How to do stuff" "heuheuheu")

@@ -63,7 +63,14 @@ void Compiler::processConsole(const std::vector<std::string>& line)
     std::string varName = line[1];
     std::string data = line[2];
 
-    const auto printCount = evaluateBracket(data);
+    unsigned int printCount = 0;
+    std::vector<std::string> splitBrackets; //Should contain a single bracket each
+    parser.extractBracket(data, splitBrackets); //Extract master bracket into sub-brackets
+    for(unsigned int a = 0; a < splitBrackets.size(); a++)
+    {
+        std::cout << "\nEvaluating: " << splitBrackets[a];
+        printCount += evaluateBracket(splitBrackets[a]);
+    }
 
     for(unsigned int a = 0; a < printCount; a++)
         bytecode.emplace_back(Instruction::CONSOLE_OUT);
@@ -90,9 +97,12 @@ unsigned int Compiler::evaluateBracket(const std::string& line)
         //Split the bracket into sections, split token = ' '
         std::vector<std::string> sections;
         std::string sectionBuffer;
+        bool isQuotationOpen = false;
         for(const auto &c : bracket)
         {
-            if(c == ' ')
+            if(c == '"')
+                isQuotationOpen = !isQuotationOpen;
+            if(c == ' ' && !isQuotationOpen)
             {
                 sections.emplace_back(sectionBuffer);
                 sectionBuffer.clear();
