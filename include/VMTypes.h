@@ -52,6 +52,8 @@ static Instruction stringToInstruction(const std::string& operation)
         return Instruction::MATH_DIVIDE;
     else if(operation == "%")
         return Instruction::MATH_MOD;
+    else if(operation == "@")
+        return Instruction::CONCENTRATE_STRINGS;
     return NONE; //Not found
 }
 

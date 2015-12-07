@@ -52,125 +52,199 @@ void Compiler::processLine(const std::vector<std::string>& line)
     {
         if(a == 0 && line[a] == "Console")
             processConsole(line);
+        else if(a == 0 && line[a] == "int")
+            declareInt(line);
+        else if(a == 0 && line[a] == "char")
+            declareChar(line);
+        else if(a == 0 && line[a] == "string")
+            declareString(line);
     }
+}
+
+void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
+{
+    if(expected != got)
+    {
+        throw std::string("Malformed argument list, got " + std::to_string(got) + " when expected " + std::to_string(expected));
+    }
+}
+
+void Compiler::declareInt(const std::vector<std::string>& line)
+{
+    validateArgumentCount(4, line.size());
+    std::string name = line[1];
+    std::string data = line[3];
+    bytecode.emplace_back(Instruction::CREATE_INT);
+    bytecode.emplace_back(stoi(data));
+    variableStack.emplace_back(Variable(name, DataType::INT));
+    return;
+}
+
+void Compiler::declareChar(const std::vector<std::string>& line)
+{
+    validateArgumentCount(4, line.size());
+    std::string name = line[1];
+    std::string data = line[3];
+    bytecode.emplace_back(Instruction::CREATE_CHAR);
+    bytecode.emplace_back(data[0]);
+    variableStack.emplace_back(Variable(name, DataType::CHAR));
+}
+
+void Compiler::declareBool(const std::vector<std::string>& line)
+{
+    validateArgumentCount(4, line.size());
+    std::string name = line[1];
+    std::string data = line[3];
+    bytecode.emplace_back(Instruction::CREATE_BOOL);
+    bytecode.emplace_back(stoi(data));
+    variableStack.emplace_back(Variable(name, DataType::BOOL));
+}
+
+void Compiler::declareString(const std::vector<std::string>& line)
+{
+    validateArgumentCount(4, line.size());
+    std::string name = line[1];
+    std::string data = line[3];
+    bytecode.emplace_back(Instruction::CREATE_STRING);
+    bytecode.emplace_back(data.size());
+    for(const auto &c : data)
+        bytecode.emplace_back(c);
+    variableStack.emplace_back(Variable(name, DataType::STRING));
 }
 
 void Compiler::processConsole(const std::vector<std::string>& line)
 {
-    if(line.size() < 2)
-        throw std::string("Malformed console call.");
+    validateArgumentCount(4, line.size());
 
-    std::string varName = line[1];
-    std::string data = line[2];
+    std::string operation = line[1];
+    std::string data = line[3];
 
-    unsigned int printCount = 0;
-    std::vector<std::string> splitBrackets; //Should contain a single bracket each
-    parser.extractBracket(data, splitBrackets); //Extract master bracket into sub-brackets
-    for(unsigned int a = 0; a < splitBrackets.size(); a++)
-    {
-        std::cout << "\nEvaluating: " << splitBrackets[a];
-        printCount += evaluateBracket(splitBrackets[a]);
-    }
-
-    for(unsigned int a = 0; a < printCount; a++)
+    unsigned int stackSizeOld = variablesOnStack;
+    evaluateBracket(data);
+    for(unsigned int a = stackSizeOld; a < variablesOnStack; a++)
         bytecode.emplace_back(Instruction::CONSOLE_OUT);
 }
 
-unsigned int Compiler::evaluateBracket(const std::string& line)
+unsigned int Compiler::evaluateBracket(const std::string& originalLine)
 {
-    //Lambda to sort a single bracket
-    unsigned int bracketsOnStack = 0;
-    auto evaluateSingleBracket = [&] (const std::string &bracket)
+    auto addVariableToStack = [&] (const std::string &data) -> void
     {
-        //Check to see if this 'bracket' is just an operator
-        Instruction possibleOperator = stringToInstruction(bracket);
-        if(possibleOperator != Instruction::NONE) //If this bracket just contains an instruction
+        int possibleVariable = isVariable(data);
+        if(possibleVariable != -1) //If it's a variable
         {
-            //Add operation to bytecode
-            bytecode.emplace_back(possibleOperator);
-            bytecode.emplace_back(bracketsOnStack);
-            bracketsOnStack = 1;
-            return;
+            bytecode.emplace_back(Instruction::CLONE_TOP);
+            bytecode.emplace_back(possibleVariable);
         }
-
-
-        //Split the bracket into sections, split token = ' '
-        std::vector<std::string> sections;
-        std::string sectionBuffer;
-        bool isQuotationOpen = false;
-        for(const auto &c : bracket)
+        else //Else if it's raw data
         {
-            if(c == '"')
-                isQuotationOpen = !isQuotationOpen;
-            if(c == ' ' && !isQuotationOpen)
+            if(data[0] == '"') //If string
             {
-                sections.emplace_back(sectionBuffer);
-                sectionBuffer.clear();
+                bytecode.emplace_back(Instruction::CREATE_STRING);
+                bytecode.emplace_back(data.size()-2); //-2 to remove the ""
+                for(unsigned int a = 1; a < data.size()-1; a++)
+                    bytecode.emplace_back(data[a]);
             }
-            else
+            else if(data[0] == '\'') //If character
             {
-                sectionBuffer += c;
+                bytecode.emplace_back(Instruction::CREATE_CHAR);
+                bytecode.emplace_back(data[1]);
             }
-        }
-        sections.emplace_back(sectionBuffer);
-
-        bracketsOnStack++;
-        //Iterate through each token
-        unsigned int sectionsOnStack = 0;
-        for(const auto &section : sections)
-        {
-            unsigned int possibleVariable = isVariable(section);
-            if(possibleVariable != -1) //If this section is a variable name
+            else //Else if number
             {
-                //Bring it to the top of the stack
-                bytecode.emplace_back(Instruction::CLONE_TOP);
-                bytecode.emplace_back(possibleVariable);
-                sectionsOnStack++;
+                bytecode.emplace_back(Instruction::CREATE_INT);
+                bytecode.emplace_back(stoi(data));
             }
-            else
-            {
-                Instruction possibleOperator = stringToInstruction(section);
-                if(possibleOperator != Instruction::NONE) //If this is an operator
-                {
-                    //Add operation to bytecode
-                    bytecode.emplace_back(possibleOperator);
-                    bytecode.emplace_back(sectionsOnStack);
-                    sectionsOnStack = 0;
-                }
-                else //If this is a piece of data
-                {
-                    if(section[0] == '"') //If it's a string
-                    {
-                        //Create string on stack
-                        bytecode.emplace_back(Instruction::CREATE_STRING);
-                        bytecode.emplace_back(section.size());
-                        for(const auto &c : section)
-                           bytecode.emplace_back(c);
-                        sectionsOnStack++;
-                    }
-                    else //If its not a string (let's assume integer)
-                    {
-                        //Create integer on stack
-                        bytecode.emplace_back(Instruction::CREATE_INT);
-                        bytecode.emplace_back(stoi(section));
-                        sectionsOnStack++;
-                    }
-                }
-            }
-
         }
     };
 
-    std::string masterBracket = parser.bracketOperatorFix(line); //Might contain sub-brackets
-    std::vector<std::string> splitBrackets; //Should contain a single bracket each
-    parser.extractBracket(masterBracket, splitBrackets); //Extract master bracket into sub-brackets
-
-    for(unsigned int a = 0; a < splitBrackets.size(); a++)
+    auto handleSubSegment = [&] (const std::vector<std::string> &segments) -> void
     {
-        evaluateSingleBracket(splitBrackets[a]);
+        const std::string &segmentOperator = segments.back();
+        Instruction segmentInstruction = stringToInstruction(segmentOperator);
+        for(unsigned int a = 0; a < segments.size()-1; a++)
+        {
+            addVariableToStack(segments[a]);
+        }
+        if(segmentInstruction != Instruction::NONE)
+        {
+            bytecode.emplace_back(segmentInstruction);
+            if(segments.size() == 1)
+            {
+                bytecode.emplace_back(variablesOnStack);
+                variablesOnStack = 0;
+            }
+            else
+            {
+                bytecode.emplace_back(segments.size()-1);
+            }
+            variablesOnStack++;
+        }
+        else
+        {
+            if(segments.size() == 1)
+            {
+                addVariableToStack(segmentOperator);
+                variablesOnStack++;
+            }
+            variablesOnStack += segments.size()-1;
+        }
+    };
+
+    //Split each argument up first
+    std::vector<std::string> arguments;
+    std::string argumentBuffer;
+    for(unsigned int c = 1; c < originalLine.size()-1; c++) //Ignore opening and close brackets
+    {
+        if(originalLine[c] == ',' && !argumentBuffer.empty())
+        {
+            arguments.emplace_back(argumentBuffer);
+            argumentBuffer.clear();
+        }
+        else
+        {
+            argumentBuffer += originalLine[c];
+        }
     }
-    return bracketsOnStack;
+    arguments.emplace_back(argumentBuffer);
+    argumentBuffer.clear();
+
+    //Parse each argument separately
+    for(auto iter = arguments.rbegin(); iter != arguments.rend(); iter++)
+    {
+        const std::string &lineToParse = *iter;
+        std::string line = parser.bracketOperatorFix(lineToParse);
+        std::vector<std::string> components;
+        parser.extractBracket(line, components);
+
+        //Split segments by space
+        for(const auto &segment : components)
+        {
+            //Split by space
+            std::string peiceBuffer;
+            std::vector<std::string> subSegment;
+            bool isQuoteOpen = false;
+            for(unsigned int c = 0; c < segment.size(); c++)
+            {
+                if(segment[c] == '"')
+                    isQuoteOpen = !isQuoteOpen;
+                if(segment[c] == ' ' && isQuoteOpen == false)
+                {
+                    subSegment.emplace_back(peiceBuffer);
+                    peiceBuffer.clear();
+                }
+                else
+                {
+                    peiceBuffer += segment[c];
+                }
+            }
+            subSegment.emplace_back(peiceBuffer);
+            handleSubSegment(subSegment);
+        }
+    }
+    return 0;
 }
+
+
 
 
 
