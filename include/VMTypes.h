@@ -21,8 +21,9 @@ enum Instruction
 };
 
 //List of data types which the virtual machine supports
-enum DataType
+enum class DataType
 {
+    NIL = -1,
     INT = 0,
     CHAR = 1,
     BOOL = 2,
@@ -67,6 +68,6 @@ static DataType stringToDataType(const std::string& type)
         return DataType::CHAR;
     else if(type == "bool")
         return DataType::BOOL;
-    throw std::string("Unknown data type conversion requested, type: " + type);
+    return DataType::NIL;
 }
 #endif // VMTYPES_H

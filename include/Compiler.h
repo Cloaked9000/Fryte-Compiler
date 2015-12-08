@@ -25,10 +25,7 @@ class Compiler
 
         void validateArgumentCount(unsigned int expected, unsigned int got);
 
-        void declareInt(const std::vector<std::string>& line);
-        void declareString(const std::vector<std::string>& line);
-        void declareChar(const std::vector<std::string>& line);
-        void declareBool(const std::vector<std::string>& line);
+        void processVariable(const std::vector<std::string>& line);
 
         int isVariable(const std::string &identifier); //Returns the stack position of the variable if found, -1 otherwise
 
@@ -36,7 +33,7 @@ class Compiler
 
         void processConsole(const std::vector<std::string> &line); //Console.*
 
-        unsigned int evaluateBracket(const std::string &line); //Converts bracket information into stack instructions. Returns the number of things added to the stack.
+        unsigned int evaluateBracket(std::string line); //Converts bracket information into stack instructions. Returns the number of things added to the stack.
 };
 
 #endif // COMPILER_H

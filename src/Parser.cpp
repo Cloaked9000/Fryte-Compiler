@@ -3,7 +3,7 @@
 Parser::Parser()
 {
     //ctor
-    seperatorTokens = {' ', '.', ',', '+'};
+    seperatorTokens = {' ', '.', ',', '+', '"'};
 }
 
 Parser::~Parser()
@@ -29,6 +29,7 @@ void Parser::tokenizeFile(std::vector<std::string>& data_in, std::vector<std::ve
                 if(c == '"')
                 {
                     isQuotationOpen = !isQuotationOpen;
+                    isBracketOpen = true;
                 }
                 else if(c == '(')
                 {
@@ -50,7 +51,7 @@ void Parser::tokenizeFile(std::vector<std::string>& data_in, std::vector<std::ve
                     a = seperatorTokens.size();
                 }
             }
-            if(!isSeperator) //If not a separator, add to buffered word
+            if(!isSeperator || isQuotationOpen) //If not a separator, add to buffered word
             {
                 lineBuffer += c;
             }

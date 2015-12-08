@@ -28,6 +28,7 @@ bool Compiler::compile(std::vector<std::string> &data)
     {
         try
         {
+            std::cout << "\nProcessing line " << line;
             processLine(parsedFile[line]);
         }
         catch(const std::string &e)
@@ -52,12 +53,8 @@ void Compiler::processLine(const std::vector<std::string>& line)
     {
         if(a == 0 && line[a] == "Console")
             processConsole(line);
-        else if(a == 0 && line[a] == "int")
-            declareInt(line);
-        else if(a == 0 && line[a] == "char")
-            declareChar(line);
-        else if(a == 0 && line[a] == "string")
-            declareString(line);
+        else if(a == 0 && (stringToDataType(line[a]) != DataType::NIL))
+            processVariable(line);
     }
 }
 
@@ -69,64 +66,52 @@ void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
     }
 }
 
-void Compiler::declareInt(const std::vector<std::string>& line)
+void Compiler::processVariable(const std::vector<std::string>& line)
 {
-    validateArgumentCount(4, line.size());
-    std::string name = line[1];
-    std::string data = line[3];
-    bytecode.emplace_back(Instruction::CREATE_INT);
-    bytecode.emplace_back(stoi(data));
-    variableStack.emplace_back(Variable(name, DataType::INT));
+    //Convert string type to Instruction
+    evaluateBracket("(" + line[3] + ")");
+    variableStack.emplace_back(Variable(line[1], stringToDataType(line[0])));
     return;
-}
-
-void Compiler::declareChar(const std::vector<std::string>& line)
-{
-    validateArgumentCount(4, line.size());
-    std::string name = line[1];
-    std::string data = line[3];
-    bytecode.emplace_back(Instruction::CREATE_CHAR);
-    bytecode.emplace_back(data[0]);
-    variableStack.emplace_back(Variable(name, DataType::CHAR));
-}
-
-void Compiler::declareBool(const std::vector<std::string>& line)
-{
-    validateArgumentCount(4, line.size());
-    std::string name = line[1];
-    std::string data = line[3];
-    bytecode.emplace_back(Instruction::CREATE_BOOL);
-    bytecode.emplace_back(stoi(data));
-    variableStack.emplace_back(Variable(name, DataType::BOOL));
-}
-
-void Compiler::declareString(const std::vector<std::string>& line)
-{
-    validateArgumentCount(4, line.size());
-    std::string name = line[1];
-    std::string data = line[3];
-    bytecode.emplace_back(Instruction::CREATE_STRING);
-    bytecode.emplace_back(data.size());
-    for(const auto &c : data)
-        bytecode.emplace_back(c);
-    variableStack.emplace_back(Variable(name, DataType::STRING));
 }
 
 void Compiler::processConsole(const std::vector<std::string>& line)
 {
-    validateArgumentCount(4, line.size());
-
     std::string operation = line[1];
-    std::string data = line[3];
+    std::string data = line[2];
 
-    unsigned int stackSizeOld = variablesOnStack;
-    evaluateBracket(data);
-    for(unsigned int a = stackSizeOld; a < variablesOnStack; a++)
-        bytecode.emplace_back(Instruction::CONSOLE_OUT);
+    if(operation == "print")
+    {
+        unsigned int stackSizeOld = variablesOnStack;
+        evaluateBracket(data);
+        for(unsigned int a = stackSizeOld; a < variablesOnStack; a++)
+            bytecode.emplace_back(Instruction::CONSOLE_OUT);
+    }
+    else if(operation == "scan")
+    {
+        std::vector<std::string> bracket;
+        parser.extractBracket(data, bracket);
+        int varPos = isVariable(bracket[0]);
+        if(varPos == -1) //Error, variable not found
+            throw std::string("Cannot scan into variable " + data + ", variable undeclared");
+        else
+        {
+            bytecode.emplace_back(Instruction::CONSOLE_IN);
+            bytecode.emplace_back(varPos);
+        }
+        std::cout << "\nDone!";
+    }
+    else
+    {
+        throw std::string("Unknown Console operation: " + operation);
+    }
 }
 
-unsigned int Compiler::evaluateBracket(const std::string& originalLine)
+unsigned int Compiler::evaluateBracket(std::string originalLine)
 {
+    //Ensure that it's bracketed properly
+    originalLine.insert(0, "(");
+    originalLine += ")";
+
     auto addVariableToStack = [&] (const std::string &data) -> void
     {
         int possibleVariable = isVariable(data);
@@ -189,13 +174,15 @@ unsigned int Compiler::evaluateBracket(const std::string& originalLine)
             variablesOnStack += segments.size()-1;
         }
     };
-
     //Split each argument up first
     std::vector<std::string> arguments;
     std::string argumentBuffer;
+    bool isQuoteOpen = false;
     for(unsigned int c = 1; c < originalLine.size()-1; c++) //Ignore opening and close brackets
     {
-        if(originalLine[c] == ',' && !argumentBuffer.empty())
+        if(originalLine[c] == '"')
+            isQuoteOpen = !isQuoteOpen;
+        if(originalLine[c] == ',' && !argumentBuffer.empty() && !isQuoteOpen)
         {
             arguments.emplace_back(argumentBuffer);
             argumentBuffer.clear();
