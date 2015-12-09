@@ -67,7 +67,9 @@ void Compiler::processLine(const std::vector<std::string>& line)
 
 void Compiler::processIF(const std::vector<std::string>& line)
 {
-
+    std::cout << "\nEvaluating IF: " << line[1];
+    evaluateBracket(line[1]);
+    bytecode.emplace_back(Instruction::CONSOLE_OUT);
 }
 
 void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
@@ -152,12 +154,15 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
 
     auto handleSubSegment = [&] (const std::vector<std::string> &segments) -> void
     {
+        //Get operator of bracket if any
         const std::string &segmentOperator = segments.back();
+        //Check to see if it's a variable, if so, float to top of stack
         Instruction segmentInstruction = stringToInstruction(segmentOperator);
         for(unsigned int a = 0; a < segments.size()-1; a++)
         {
             addVariableToStack(segments[a]);
         }
+        //If it's an instruction
         if(segmentInstruction != Instruction::NONE)
         {
             bytecode.emplace_back(segmentInstruction);
@@ -172,7 +177,7 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             }
             variablesOnStack++;
         }
-        else
+        else //Else if its a piece of data
         {
             if(segments.size() == 1)
             {

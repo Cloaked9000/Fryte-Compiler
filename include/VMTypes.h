@@ -18,6 +18,7 @@ enum Instruction
     MATH_MOD = 11, //Modulus two or more things. MATH_MOD(NumberOfThingsToAdd, data1, data2, etc)
     CLONE_TOP = 12, //Clones a variable's contents from a position in the stack to the top of the stack. CLONE_TOP(StackPos)
     CONCENTRATE_STRINGS = 13, //Concentrates strings together into a new string. CONCENTRATE_STRINGS(NumberOfStrings)
+    COMPARE_VALUES = 14, //Compare the last two things on the stack and add true or false if they are equal
 };
 
 //List of data types which the virtual machine supports
@@ -55,6 +56,8 @@ static Instruction stringToInstruction(const std::string& operation)
         return Instruction::MATH_MOD;
     else if(operation == "@")
         return Instruction::CONCENTRATE_STRINGS;
+    else if(operation == "=")
+        return Instruction::COMPARE_VALUES;
     return NONE; //Not found
 }
 
