@@ -33,6 +33,8 @@ class Compiler
 
         void processConsole(const std::vector<std::string> &line); //Console.*
 
+        void processIF(const std::vector<std::string> &line); //Console.*
+
         unsigned int evaluateBracket(std::string line); //Converts bracket information into stack instructions. Returns the number of things added to the stack.
 };
 

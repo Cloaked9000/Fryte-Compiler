@@ -60,7 +60,14 @@ void Compiler::processLine(const std::vector<std::string>& line)
             processConsole(line);
         else if(a == 0 && (stringToDataType(line[a]) != DataType::NIL))
             processVariable(line);
+        else if(a == 0 && line[a] == "if")
+            processIF(line);
     }
+}
+
+void Compiler::processIF(const std::vector<std::string>& line)
+{
+
 }
 
 void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
