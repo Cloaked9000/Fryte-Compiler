@@ -41,6 +41,11 @@ bool Compiler::compile(std::vector<std::string> &data)
             std::cout << "\nAn internal exception occurred whilst compiling line: "  << line;
             return false;
         }
+        catch(...)
+        {
+            std::cout << "\nAn unknown error occurred whilst compiling line: "  << line;
+            return false;
+        }
     }
 
     BytecodeIO::writeBytecode("out.fry", &bytecode);
@@ -77,8 +82,8 @@ void Compiler::processVariable(const std::vector<std::string>& line)
 void Compiler::processConsole(const std::vector<std::string>& line)
 {
     std::string operation = line[1];
+    std::cout << "\nOperation: " << operation;
     std::string data = line[2];
-
     if(operation == "print")
     {
         unsigned int stackSizeOld = variablesOnStack;
@@ -108,10 +113,6 @@ void Compiler::processConsole(const std::vector<std::string>& line)
 
 unsigned int Compiler::evaluateBracket(std::string originalLine)
 {
-    //Ensure that it's bracketed properly
-    originalLine.insert(0, "(");
-    originalLine += ")";
-
     auto addVariableToStack = [&] (const std::string &data) -> void
     {
         int possibleVariable = isVariable(data);
@@ -192,8 +193,21 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             argumentBuffer += originalLine[c];
         }
     }
+
     arguments.emplace_back(argumentBuffer);
     argumentBuffer.clear();
+
+    //Process brackets in each argument
+    for(auto &arg : arguments)
+    {
+        while(arg[0] == '(' || arg[0] == ' ')
+                arg.erase(0,1);
+        while(arg[arg.size()-1] == ')' || arg[arg.size()-1] == ' ')
+            arg.erase(arg.size()-1, 1);
+        arg.insert(0, "(");
+        arg += ")";
+        std::cout << "\nArgument: " << arg;
+    }
 
     //Parse each argument separately
     for(auto iter = arguments.rbegin(); iter != arguments.rend(); iter++)
