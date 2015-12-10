@@ -67,9 +67,9 @@ void Compiler::processLine(const std::vector<std::string>& line)
 
 void Compiler::processIF(const std::vector<std::string>& line)
 {
-    std::cout << "\nEvaluating IF: " << line[1];
     evaluateBracket(line[1]);
-    bytecode.emplace_back(Instruction::CONSOLE_OUT);
+    bytecode.emplace_back(Instruction::CONDITIONAL_IF);
+    bytecode.emplace_back(bytecode.size());
 }
 
 void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)

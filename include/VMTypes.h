@@ -19,6 +19,7 @@ enum Instruction
     CLONE_TOP = 12, //Clones a variable's contents from a position in the stack to the top of the stack. CLONE_TOP(StackPos)
     CONCENTRATE_STRINGS = 13, //Concentrates strings together into a new string. CONCENTRATE_STRINGS(NumberOfStrings)
     COMPARE_VALUES = 14, //Compare the last two things on the stack and add true or false if they are equal
+    CONDITIONAL_IF = 15, //If last thing on stack is true/false, runs specified bytecode position
 };
 
 //List of data types which the virtual machine supports
