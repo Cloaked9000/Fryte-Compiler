@@ -62,6 +62,42 @@ void Compiler::processLine(const std::vector<std::string>& line)
             processVariable(line);
         else if(a == 0 && line[a] == "if")
             processIF(line);
+        else if(a == 0 && (line[a] == "{" || line[a] == "}"))
+            processScope(line);
+    }
+}
+
+void Compiler::processScope(const std::vector<std::string> &line)
+{
+    //map<key><startDepth, beginPos>
+    if(line[0] == "{") //Scope open
+    {
+        scopes[scopes.size()] = std::make_pair(scopeDepth, bytecode.size()); //Store current bytecode position for scope start in the
+
+        scopeDepth++;
+    }
+    else if(line[0] == "}") //Scope close
+    {
+        scopeDepth--;
+
+        //Find which scope it is ending
+        for(auto iter = scopes.begin(); iter != scopes.end();)
+        {
+            if(iter->second.first == scopeDepth) //If a scope is ending and this is the scope we need to finish
+            {
+                bytecode[iter->second.second-1] = bytecode.size()-1;
+                std::cout << "\nScope ends at: " << iter->second.second << ", setting to: " << bytecode.size()-1;
+                iter = scopes.erase(iter);
+            }
+            else
+            {
+                iter++;
+            }
+        }
+    }
+    else
+    {
+        throw std::string("Error processing scope change, unknown operator '" + line[0] + "'");
     }
 }
 
@@ -69,7 +105,7 @@ void Compiler::processIF(const std::vector<std::string>& line)
 {
     evaluateBracket(line[1]);
     bytecode.emplace_back(Instruction::CONDITIONAL_IF);
-    bytecode.emplace_back(bytecode.size());
+    bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
 }
 
 void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
