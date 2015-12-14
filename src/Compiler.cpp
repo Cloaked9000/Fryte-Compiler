@@ -28,22 +28,21 @@ bool Compiler::compile(std::vector<std::string> &data)
     {
         try
         {
-            std::cout << "\nProcessing line " << line;
             processLine(parsedFile[line]);
         }
         catch(const std::string &e)
         {
-            std::cout << "\nError on line " + line << ": " << e;
+            std::cout << "\nError on line " << line+1 << ": " << e << std::endl;
             return false;
         }
         catch(const std::exception &e)
         {
-            std::cout << "\nAn internal exception occurred whilst compiling line: "  << line;
+            std::cout << "\nAn internal exception occurred whilst compiling line: "  << line << std::endl;
             return false;
         }
         catch(...)
         {
-            std::cout << "\nAn unknown error occurred whilst compiling line: "  << line;
+            std::cout << "\nAn unknown error occurred whilst compiling line: "  << line << std::endl;
             return false;
         }
     }
@@ -54,17 +53,23 @@ bool Compiler::compile(std::vector<std::string> &data)
 
 void Compiler::processLine(const std::vector<std::string>& line)
 {
-    for(unsigned int a = 0; a < line.size(); a++)
-    {
-        if(a == 0 && line[a] == "Console")
-            processConsole(line);
-        else if(a == 0 && (stringToDataType(line[a]) != DataType::NIL))
-            processVariable(line);
-        else if(a == 0 && line[a] == "if")
-            processIF(line);
-        else if(a == 0 && (line[a] == "{" || line[a] == "}"))
-            processScope(line);
-    }
+    //Don't do anything if there's nothing in it
+    if(line.empty())
+        return;
+
+    //Check to see what the line wants to do
+    if(line.front() == "Console")
+        processConsole(line);
+    else if(stringToDataType(line.front()) != DataType::NIL || line.front() == "auto")
+        processVariable(line);
+    else if(line.front() == "if")
+        processIF(line);
+    else if((line.front() == "{" || line.front() == "}"))
+        processScope(line);
+    else if(isVariable(line.front()) != -1)
+        processVariable(line);
+    else
+        throw std::string("Unknown instruction '" + line.front() + "'");
 }
 
 void Compiler::processScope(const std::vector<std::string> &line)
@@ -79,19 +84,19 @@ void Compiler::processScope(const std::vector<std::string> &line)
     else if(line[0] == "}") //Scope close
     {
         scopeDepth--;
+        if(scopeDepth < 0) //No scope to close!
+        {
+            throw std::string("No such scope to close");
+        }
 
         //Find which scope it is ending
-        for(auto iter = scopes.begin(); iter != scopes.end();)
+        for(auto iter = scopes.begin(); iter != scopes.end(); iter++)
         {
             if(iter->second.first == scopeDepth) //If a scope is ending and this is the scope we need to finish
             {
                 bytecode[iter->second.second-1] = bytecode.size()-1;
-                std::cout << "\nScope ends at: " << iter->second.second << ", setting to: " << bytecode.size()-1;
                 iter = scopes.erase(iter);
-            }
-            else
-            {
-                iter++;
+                break;
             }
         }
     }
@@ -116,18 +121,62 @@ void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
     }
 }
 
-void Compiler::processVariable(const std::vector<std::string>& line)
+void Compiler::processVariable(const std::vector<std::string>& line) //things like "int a = 20;
 {
-    //Convert string type to Instruction
-    evaluateBracket("(" + line[3] + ")");
-    variableStack.emplace_back(Variable(line[1], stringToDataType(line[0])));
+    DataType possibleType = stringToDataType(line[0]);
+    if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg int a = 20)
+    {
+        evaluateBracket("(" + line[2] + ")"); //Evaluate the bracket containing what the variable should be set to
+        bytecode.emplace_back(Instruction::SET_VARIABLE); //Add the set variable instructions
+        bytecode.emplace_back(isVariable(line[0]));
+    }
+    else //If we're creating a new variable (eg int a = 20)
+    {
+        //Convert its data type from string to enum
+        DataType type = stringToDataType(line[0]);
+        if(line.size() > 2) //If there's a value provided (int a = 20)
+        {
+            //Convert initial value to bytecode
+            evaluateBracket("(" + line[3] + ")");
+        }
+        else //Else no default value provided (int a)
+        {
+            //Give a default value based on its type
+            if(line[0] == "string")
+            {
+                bytecode.emplace_back(Instruction::CREATE_STRING);
+                bytecode.emplace_back(0);
+            }
+            else if(line[0] == "int")
+            {
+                bytecode.emplace_back(Instruction::CREATE_INT);
+                bytecode.emplace_back(0);
+            }
+            else if(line[0] == "char")
+            {
+                bytecode.emplace_back(Instruction::CREATE_CHAR);
+                bytecode.emplace_back(' ');
+            }
+            else if(line[0] == "bool")
+            {
+                bytecode.emplace_back(Instruction::CREATE_BOOL);
+                bytecode.emplace_back(0);
+            }
+            else if(line[0] == "auto")
+            {
+                throw std::string("Can't deduct type for auto as no initial value is provided");
+            }
+        }
+
+        //Add the variable create instruction
+        variableStack.emplace_back(Variable(line[1], type));
+    }
     return;
 }
 
 void Compiler::processConsole(const std::vector<std::string>& line)
 {
     std::string operation = line[1];
-    std::cout << "\nOperation: " << operation;
     std::string data = line[2];
     if(operation == "print")
     {
@@ -148,7 +197,6 @@ void Compiler::processConsole(const std::vector<std::string>& line)
             bytecode.emplace_back(Instruction::CONSOLE_IN);
             bytecode.emplace_back(varPos);
         }
-        std::cout << "\nDone!";
     }
     else
     {
@@ -227,7 +275,8 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     std::vector<std::string> arguments;
     std::string argumentBuffer;
     bool isQuoteOpen = false;
-    for(unsigned int c = 1; c < originalLine.size()-1; c++) //Ignore opening and close brackets
+    std::cout << "\nOriginal: " << originalLine;
+    for(unsigned int c = 0; c < originalLine.size(); c++) //Ignore opening and close brackets
     {
         if(originalLine[c] == '"')
             isQuoteOpen = !isQuoteOpen;
@@ -254,12 +303,12 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             arg.erase(arg.size()-1, 1);
         arg.insert(0, "(");
         arg += ")";
-        std::cout << "\nArgument: " << arg;
     }
 
     //Parse each argument separately
     for(auto iter = arguments.rbegin(); iter != arguments.rend(); iter++)
     {
+        std::cout << "\nGot: " << *iter;
         const std::string &lineToParse = *iter;
         std::string line = parser.bracketOperatorFix(lineToParse);
         std::vector<std::string> components;

@@ -68,12 +68,19 @@ std::string Parser::bracketOperatorFix(const std::string &data)
     std::string returnValue; //Store what the function will return as it's generated
     unsigned int currentLayer = 0; //To keep track of the current bracket layer
     std::map<unsigned int, char> bracketOperators; //Keep track of each bracket layer's operator. Map to keep track of multiple layers of brackets. map<LAYER, OPERATOR>
+    bool isQuoteOpen = false;
 
     //Find operators and data
     for(unsigned int a = 0; a < data.size(); a++)
     {
+        //If quotation marks
+        if(data[a] == '"')
+        {
+            isQuoteOpen = !isQuoteOpen;
+        }
+
         //If new bracket, update bracket layer and set the layer's default operator (+)
-        if(data[a] == '(')
+        if(!isQuoteOpen && data[a] == '(')
         {
             currentLayer++;
             bracketOperators[currentLayer] = 0;
@@ -81,7 +88,7 @@ std::string Parser::bracketOperatorFix(const std::string &data)
         }
 
         //If we're exiting a bracket, update the layer and insert a space followed by this layer's operator
-        else if(data[a] == ')')
+        else if(!isQuoteOpen && data[a] == ')')
         {
             if(bracketOperators[currentLayer] != 0) //Only add operator to the end if there is one
             {
@@ -93,7 +100,7 @@ std::string Parser::bracketOperatorFix(const std::string &data)
         }
 
         //Else if an operator, don't add the operator to the return value and store this layer's operator
-        else if(stringToInstruction(std::string(1, data[a])) != -1)
+        else if(!isQuoteOpen && stringToInstruction(std::string(1, data[a])) != -1)
         {
             bracketOperators[currentLayer] = data[a];
             returnValue.erase(returnValue.size()-1, 1);
