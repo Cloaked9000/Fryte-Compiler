@@ -37,12 +37,12 @@ bool Compiler::compile(std::vector<std::string> &data)
         }
         catch(const std::exception &e)
         {
-            std::cout << "\nAn internal exception occurred whilst compiling line: "  << line << std::endl;
+            std::cout << "\nAn internal exception occurred whilst compiling line: "  << line+1 << std::endl;
             return false;
         }
         catch(...)
         {
-            std::cout << "\nAn unknown error occurred whilst compiling line: "  << line << std::endl;
+            std::cout << "\nAn unknown error occurred whilst compiling line: "  << line+1 << std::endl;
             return false;
         }
     }
@@ -275,7 +275,11 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     std::vector<std::string> arguments;
     std::string argumentBuffer;
     bool isQuoteOpen = false;
-    std::cout << "\nOriginal: " << originalLine;
+    //Take off surrounding brackets if any
+    if(originalLine[0] == '(')
+        originalLine.erase(0,1);
+    if(originalLine[originalLine.size()-1] == ')')
+        originalLine.erase(originalLine.size()-1, 1);
     for(unsigned int c = 0; c < originalLine.size(); c++) //Ignore opening and close brackets
     {
         if(originalLine[c] == '"')
@@ -297,9 +301,9 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     //Process brackets in each argument
     for(auto &arg : arguments)
     {
-        while(arg[0] == '(' || arg[0] == ' ')
+        while(arg[0] == ' ')
                 arg.erase(0,1);
-        while(arg[arg.size()-1] == ')' || arg[arg.size()-1] == ' ')
+        while(arg[arg.size()-1] == ' ')
             arg.erase(arg.size()-1, 1);
         arg.insert(0, "(");
         arg += ")";
@@ -308,7 +312,6 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     //Parse each argument separately
     for(auto iter = arguments.rbegin(); iter != arguments.rend(); iter++)
     {
-        std::cout << "\nGot: " << *iter;
         const std::string &lineToParse = *iter;
         std::string line = parser.bracketOperatorFix(lineToParse);
         std::vector<std::string> components;

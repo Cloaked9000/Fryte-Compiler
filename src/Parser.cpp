@@ -67,7 +67,7 @@ std::string Parser::bracketOperatorFix(const std::string &data)
 
     std::string returnValue; //Store what the function will return as it's generated
     unsigned int currentLayer = 0; //To keep track of the current bracket layer
-    std::map<unsigned int, char> bracketOperators; //Keep track of each bracket layer's operator. Map to keep track of multiple layers of brackets. map<LAYER, OPERATOR>
+    std::map<unsigned int, std::string> bracketOperators; //Keep track of each bracket layer's operator. Map to keep track of multiple layers of brackets. map<LAYER, OPERATOR>
     bool isQuoteOpen = false;
 
     //Find operators and data
@@ -83,14 +83,14 @@ std::string Parser::bracketOperatorFix(const std::string &data)
         if(!isQuoteOpen && data[a] == '(')
         {
             currentLayer++;
-            bracketOperators[currentLayer] = 0;
+            bracketOperators[currentLayer] = "";
             returnValue += data[a];
         }
 
         //If we're exiting a bracket, update the layer and insert a space followed by this layer's operator
         else if(!isQuoteOpen && data[a] == ')')
         {
-            if(bracketOperators[currentLayer] != 0) //Only add operator to the end if there is one
+            if(!bracketOperators[currentLayer].empty()) //Only add operator to the end if there is one
             {
                 returnValue += ' ';
                 returnValue += bracketOperators[currentLayer];
@@ -99,10 +99,18 @@ std::string Parser::bracketOperatorFix(const std::string &data)
             currentLayer--;
         }
 
-        //Else if an operator, don't add the operator to the return value and store this layer's operator
-        else if(!isQuoteOpen && stringToInstruction(std::string(1, data[a])) != -1)
+        //Else if dual-character operator. Temporary fix.
+        else if(!isQuoteOpen && a != data.size() && stringToInstruction(data.substr(a, 2)) != -1)
         {
-            bracketOperators[currentLayer] = data[a];
+            bracketOperators[currentLayer] = data.substr(a, 2);
+            returnValue.erase(returnValue.size()-1, 1);
+            a++;
+        }
+
+        //Else if a single-character operator, don't add the operator to the return value and store this layer's operator
+        else if(!isQuoteOpen && stringToInstruction(data.substr(a, 1)) != -1)
+        {
+            bracketOperators[currentLayer] = data.substr(a, 1);
             returnValue.erase(returnValue.size()-1, 1);
         }
 

@@ -18,9 +18,18 @@ enum Instruction
     MATH_MOD = 11, //Modulus two or more things. MATH_MOD(NumberOfThingsToAdd, data1, data2, etc)
     CLONE_TOP = 12, //Clones a variable's contents from a position in the stack to the top of the stack. CLONE_TOP(StackPos)
     CONCENTRATE_STRINGS = 13, //Concentrates strings together into a new string. CONCENTRATE_STRINGS(NumberOfStrings)
-    COMPARE_VALUES = 14, //Compare the last two things on the stack and add true or false if they are equal
+    COMPARE_EQUAL = 14, //Compare the last two things on the stack and add true or false if they are equal
     CONDITIONAL_IF = 15, //If last thing on stack is true/false, runs specified bytecode position
     SET_VARIABLE = 16, //Sets the data of a variable in the stack. SET_VARIABLE(stackPos). New value taken from top of stack.
+    COMPARE_UNEQUAL = 17,
+    COMPARE_LESS_THAN = 18,
+    COMPARE_MORE_THAN = 19,
+    COMPARE_LESS_THAN_OR_EQUAL = 20,
+    COMPARE_MORE_THAN_OR_EQUAL = 21,
+    MATH_MULTIPLY_EQUALS = 22,
+    MATH_DIVIDE_EQUALS = 23,
+    MATH_MINUS_EQUALS = 24,
+    MATH_PLUS_EQUALS = 25,
 };
 
 //List of data types which the virtual machine supports
@@ -58,8 +67,26 @@ static Instruction stringToInstruction(const std::string& operation)
         return Instruction::MATH_MOD;
     else if(operation == "@")
         return Instruction::CONCENTRATE_STRINGS;
-    else if(operation == "=")
-        return Instruction::COMPARE_VALUES;
+    else if(operation == "==")
+        return Instruction::COMPARE_EQUAL;
+    else if(operation == "!=")
+        return Instruction::COMPARE_UNEQUAL;
+    else if(operation == "<")
+        return Instruction::COMPARE_LESS_THAN;
+    else if(operation == ">")
+        return Instruction::COMPARE_MORE_THAN;
+    else if(operation == "<=")
+        return Instruction::COMPARE_LESS_THAN_OR_EQUAL;
+    else if(operation == ">=")
+        return Instruction::COMPARE_MORE_THAN_OR_EQUAL;
+    else if(operation == "*=")
+        return Instruction::MATH_MULTIPLY_EQUALS;
+    else if(operation == "/=")
+        return Instruction::MATH_DIVIDE_EQUALS;
+    else if(operation == "-=")
+        return Instruction::MATH_MINUS_EQUALS;
+    else if(operation == "+=")
+        return Instruction::MATH_PLUS_EQUALS;
     return NONE; //Not found
 }
 
