@@ -22,7 +22,7 @@ class Compiler
         Parser parser;
         std::vector<unsigned char> bytecode; //Keeps track of bytecode to write to file
         std::vector<Variable> variableStack; //Keeps track of variable position on the stack to be
-        std::unordered_map<unsigned int, std::pair<unsigned int, unsigned int>> scopes; //Keeps track of where each scope's start and end point in the bytecode are and its start depth. map<key><startDepth, beginPos>
+        std::unordered_map<unsigned int, std::pair<int, unsigned int>> scopes; //Keeps track of where each scope's start and end point in the bytecode are and its start depth. map<key><startDepth, beginPos>
         int scopeDepth = 0; //Keeps track of current scope depth
 
         unsigned int variablesOnStack = 0;

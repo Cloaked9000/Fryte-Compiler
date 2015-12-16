@@ -21,15 +21,11 @@ enum Instruction
     COMPARE_EQUAL = 14, //Compare the last two things on the stack and add true or false if they are equal
     CONDITIONAL_IF = 15, //If last thing on stack is true/false, runs specified bytecode position
     SET_VARIABLE = 16, //Sets the data of a variable in the stack. SET_VARIABLE(stackPos). New value taken from top of stack.
-    COMPARE_UNEQUAL = 17,
-    COMPARE_LESS_THAN = 18,
-    COMPARE_MORE_THAN = 19,
-    COMPARE_LESS_THAN_OR_EQUAL = 20,
-    COMPARE_MORE_THAN_OR_EQUAL = 21,
-    MATH_MULTIPLY_EQUALS = 22,
-    MATH_DIVIDE_EQUALS = 23,
-    MATH_MINUS_EQUALS = 24,
-    MATH_PLUS_EQUALS = 25,
+    COMPARE_UNEQUAL = 17, //Compare the last two things on the stack and add true or false if they are unequal
+    COMPARE_LESS_THAN = 18, //Compare last two things on the stack and push true if object one is less than object two
+    COMPARE_MORE_THAN = 19, //Compare last two things on the stack and push true if object one is more than object two
+    COMPARE_LESS_THAN_OR_EQUAL = 20, //Compare last two things on the stack and pushes true if object one is less than or equal to object two
+    COMPARE_MORE_THAN_OR_EQUAL = 21, //Compare last two things on the stack and pushes true if object one is more than or equal to object two
 };
 
 //List of data types which the virtual machine supports
@@ -79,14 +75,6 @@ static Instruction stringToInstruction(const std::string& operation)
         return Instruction::COMPARE_LESS_THAN_OR_EQUAL;
     else if(operation == ">=")
         return Instruction::COMPARE_MORE_THAN_OR_EQUAL;
-    else if(operation == "*=")
-        return Instruction::MATH_MULTIPLY_EQUALS;
-    else if(operation == "/=")
-        return Instruction::MATH_DIVIDE_EQUALS;
-    else if(operation == "-=")
-        return Instruction::MATH_MINUS_EQUALS;
-    else if(operation == "+=")
-        return Instruction::MATH_PLUS_EQUALS;
     return NONE; //Not found
 }
 

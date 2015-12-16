@@ -121,13 +121,52 @@ void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
     }
 }
 
-void Compiler::processVariable(const std::vector<std::string>& line) //things like "int a = 20;
+void Compiler::processVariable(const std::vector<std::string>& line) //things like "int a = 20"
 {
     DataType possibleType = stringToDataType(line[0]);
-    if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg int a = 20)
+    if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
     {
-        evaluateBracket("(" + line[2] + ")"); //Evaluate the bracket containing what the variable should be set to
-        bytecode.emplace_back(Instruction::SET_VARIABLE); //Add the set variable instructions
+        //First move the variable that we're multiplying by to the top of the stack for the multiplication
+        bytecode.emplace_back(Instruction::CLONE_TOP);
+        bytecode.emplace_back(isVariable(line[0]));
+
+        //Evaluate the bracket containing what the variable should be set to
+        evaluateBracket("(" + line[2] + ")");
+
+        //Do different things depending on the assignment operator
+        if(line[1] == "*=")
+        {
+            //Multiple the last two things on the stack (the bracket and the variable)
+            bytecode.emplace_back(Instruction::MATH_MULTIPLY);
+            bytecode.emplace_back(2);
+        }
+        else if(line[1] == "/=")
+        {
+            //Divide the last two things on the stack (the bracket and the variable)
+            bytecode.emplace_back(Instruction::MATH_DIVIDE);
+            bytecode.emplace_back(2);
+        }
+        else if(line[1] == "%=")
+        {
+            //Divide the last two things on the stack (the bracket and the variable)
+            bytecode.emplace_back(Instruction::MATH_MOD);
+            bytecode.emplace_back(2);
+        }
+        else if(line[1] == "+=")
+        {
+            //Divide the last two things on the stack (the bracket and the variable)
+            bytecode.emplace_back(Instruction::MATH_ADD);
+            bytecode.emplace_back(2);
+        }
+        else if(line[1] == "-=")
+        {
+            //Divide the last two things on the stack (the bracket and the variable)
+            bytecode.emplace_back(Instruction::MATH_SUBTRACT);
+            bytecode.emplace_back(2);
+        }
+
+        //Set the variable to the last thing on the stack
+        bytecode.emplace_back(Instruction::SET_VARIABLE);
         bytecode.emplace_back(isVariable(line[0]));
     }
     else //If we're creating a new variable (eg int a = 20)
@@ -206,6 +245,8 @@ void Compiler::processConsole(const std::vector<std::string>& line)
 
 unsigned int Compiler::evaluateBracket(std::string originalLine)
 {
+    unsigned int oldVariablesOnStack = variablesOnStack;
+    variablesOnStack = 0;
     auto addVariableToStack = [&] (const std::string &data) -> void
     {
         int possibleVariable = isVariable(data);
@@ -342,9 +383,9 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             handleSubSegment(subSegment);
         }
     }
+    variablesOnStack += oldVariablesOnStack;
     return 0;
 }
-
 
 
 

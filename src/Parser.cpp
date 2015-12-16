@@ -3,7 +3,7 @@
 Parser::Parser()
 {
     //ctor
-    seperatorTokens = {' ', '.', ',', '+', '"'};
+    seperatorTokens = {' ', '.', ',', '"'};
 }
 
 Parser::~Parser()
