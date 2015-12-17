@@ -70,6 +70,8 @@ void Compiler::processLine(const std::vector<std::string>& line)
         processVariable(line);
     else if(line[0] == "goto" || line[0][line[0].size()-1] == ':')
         processGoto(line);
+    else if(line[0] == "while")
+        processWhile(line);
     else //Else unknown
         throw std::string("Unknown instruction '" + line[0] + "'");
 }
@@ -104,8 +106,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
     //map<key><startDepth, beginPos>
     if(line[0] == "{") //Scope open
     {
-        scopes[scopes.size()] = std::make_pair(scopeDepth, bytecode.size()); //Store current bytecode position for scope start in the
-
+        scopes.emplace_back(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, expectedScopeType.type));
         scopeDepth++;
     }
     else if(line[0] == "}") //Scope close
@@ -117,14 +118,28 @@ void Compiler::processScope(const std::vector<std::string> &line)
         }
 
         //Find which scope it is ending
-        for(auto iter = scopes.begin(); iter != scopes.end(); iter++)
+        for(auto iter = scopes.begin(); iter != scopes.end();)
         {
-            if(iter->second.first == scopeDepth) //If a scope is ending and this is the scope we need to finish
+            Scope &current = *iter;
+            if(current.scopeDepth == scopeDepth) //We've found the scope that's ending
             {
-                bytecode[iter->second.second-1] = bytecode.size()-1;
+                if(current.type == Scope::IF) //If an IF statement is ending
+                {
+                    bytecode[current.startPos-1] = bytecode.size()-1;
+                }
+                else if(current.type == Scope::WHILE) //If a WHILE statement is ending
+                {
+                    bytecode.emplace_back(Instruction::GOTO);
+                    bytecode.emplace_back(current.statementPos);
+                    bytecode[current.startPos-1] = bytecode.size()-1;
+                }
                 iter = scopes.erase(iter);
-                break;
             }
+            else
+            {
+                iter++;
+            }
+
         }
     }
     else
@@ -133,11 +148,23 @@ void Compiler::processScope(const std::vector<std::string> &line)
     }
 }
 
-void Compiler::processIF(const std::vector<std::string>& line)
+void Compiler::processWhile(const std::vector<std::string>& line)
 {
+    expectedScopeType.statementPos = bytecode.size();
     evaluateBracket(line[1]);
     bytecode.emplace_back(Instruction::CONDITIONAL_IF);
     bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
+    expectedScopeType.type = Scope::WHILE;
+}
+
+void Compiler::processIF(const std::vector<std::string>& line)
+{
+    evaluateBracket(line[1]);
+    std::cout << "\nEvaluating: " << line[1];
+    bytecode.emplace_back(Instruction::CONDITIONAL_IF);
+    bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
+    expectedScopeType.type = Scope::IF;
+    expectedScopeType.statementPos = bytecode.size();
 }
 
 void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)

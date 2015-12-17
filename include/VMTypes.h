@@ -18,7 +18,7 @@ enum Instruction
     MATH_MOD = 11, //Modulus two or more things. MATH_MOD(NumberOfThingsToAdd, data1, data2, etc)
     CLONE_TOP = 12, //Clones a variable's contents from a position in the stack to the top of the stack. CLONE_TOP(StackPos)
     CONCENTRATE_STRINGS = 13, //Concentrates strings together into a new string. CONCENTRATE_STRINGS(NumberOfStrings)
-    COMPARE_EQUAL = 14, //Compare the last two things on the stack and add true or false if they are equal
+    COMPARE_EQUAL = 14, //Compare the last X things on the stack and add true or false if they are equal
     CONDITIONAL_IF = 15, //If last thing on stack is true/false, runs specified bytecode position
     SET_VARIABLE = 16, //Sets the data of a variable in the stack. SET_VARIABLE(stackPos). New value taken from top of stack.
     COMPARE_UNEQUAL = 17, //Compare the last two things on the stack and add true or false if they are unequal
@@ -26,6 +26,7 @@ enum Instruction
     COMPARE_MORE_THAN = 19, //Compare last two things on the stack and push true if object one is more than object two
     COMPARE_LESS_THAN_OR_EQUAL = 20, //Compare last two things on the stack and pushes true if object one is less than or equal to object two
     COMPARE_MORE_THAN_OR_EQUAL = 21, //Compare last two things on the stack and pushes true if object one is more than or equal to object two
+    COMPARE_AND = 22, //Compare the last X things on the stack and push true if they are both true. False otherwise. COMPARE_AND(NumberOfThings, 1, 2, 3...)
 };
 
 //List of data types which the virtual machine supports
@@ -75,6 +76,8 @@ static Instruction stringToInstruction(const std::string& operation)
         return Instruction::COMPARE_LESS_THAN_OR_EQUAL;
     else if(operation == ">=")
         return Instruction::COMPARE_MORE_THAN_OR_EQUAL;
+    else if(operation == "&&")
+        return Instruction::COMPARE_AND;
     return NONE; //Not found
 }
 
@@ -90,4 +93,24 @@ static DataType stringToDataType(const std::string& type)
         return DataType::BOOL;
     return DataType::NIL;
 }
+
+struct Scope
+{
+    enum ScopeType
+    {
+        IF, WHILE
+    };
+    Scope()=default;
+    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, ScopeType &t)
+    {
+        statementPos = statPos;
+        startPos = spos;
+        scopeDepth = sdep;
+        type = t;
+    }
+    ScopeType type;
+    unsigned int startPos;
+    int scopeDepth;
+    unsigned int statementPos;
+};
 #endif // VMTYPES_H
