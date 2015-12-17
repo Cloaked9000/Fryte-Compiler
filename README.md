@@ -23,46 +23,28 @@ Declaring/initialising/setting/using variables.
 
 # Sample program
 
+```
 string key = "password1"
-
 string entered
-
 int attemptsRemaining = 3
 
-
 int a = ((10 + 20) + (2))
-
 Console.print ("Result: ", ((10 + 20) + (2)), "\n")
 
-
 mypass:
-
 Console.print ("Enter the password: ")
-
 Console.scan (entered)
-
 if (entered == key)
-
 {
-
     Console.print ("Password was correct!")
-    
 }
-
 if (entered != key)
-
 {
-
     Console.print ("Password incorrect. Attempts remaining: ", attemptsRemaining, "\n")
-    
     attemptsRemaining -= 1
-    
     if (attemptsRemaining >= 0)
-    
     {
-    
         goto mypass
-        
     }
-    
 }
+```
