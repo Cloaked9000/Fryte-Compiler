@@ -13,7 +13,6 @@ int main()
     std::vector<std::string> data;
     if(!BytecodeIO::readFile("file.txt", data))
         return -1;
-
     Compiler compiler;
     compiler.compile(data);
     return 0;

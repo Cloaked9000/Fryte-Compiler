@@ -15,10 +15,12 @@ class Parser
         virtual ~Parser();
         void tokenizeFile(std::vector<std::string> &data_in, std::vector<std::vector<std::string>> &data_out);
         std::string bracketOperatorFix(const std::string &data);
-        void bracketOperatorFixNew(const std::string &data, std::string &result);
-        void extractBracket(std::string bracket, std::vector<std::string> &results);
+        void bracketOperatorFixNew(const std::string &data, std::string &result); //Fix bracket operators, things like (1 + 1) to (1 1 +)
+        void extractBracket(std::string bracket, std::vector<std::string> &results); //Extract all brackets in a line and move into a vector
+        void processEscapeSequences(std::string &data); //Replace things like '\n' with the newline character
     protected:
     private:
+        void replaceAll(std::string &data, const std::string &from, const std::string &to); //Replaces all instances of a string with another
         std::vector<unsigned char> seperatorTokens;
 };
 

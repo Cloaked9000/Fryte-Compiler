@@ -23,6 +23,7 @@ class Compiler
         std::vector<unsigned char> bytecode; //Keeps track of bytecode to write to file
         std::vector<Variable> variableStack; //Keeps track of variable position on the stack to be
         std::unordered_map<unsigned int, std::pair<int, unsigned int>> scopes; //Keeps track of where each scope's start and end point in the bytecode are and its start depth. map<key><startDepth, beginPos>
+        std::unordered_map<std::string, unsigned int> gotos; //Keeps track of created gotos. map<identifier, bytecodePos>
         int scopeDepth = 0; //Keeps track of current scope depth
 
         unsigned int variablesOnStack = 0;
@@ -30,6 +31,8 @@ class Compiler
         void validateArgumentCount(unsigned int expected, unsigned int got);
 
         void processVariable(const std::vector<std::string>& line);
+
+        void processGoto(const std::vector<std::string> &line);
 
         int isVariable(const std::string &identifier); //Returns the stack position of the variable if found, -1 otherwise
 

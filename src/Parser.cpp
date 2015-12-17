@@ -3,7 +3,7 @@
 Parser::Parser()
 {
     //ctor
-    seperatorTokens = {' ', '.', ',', '"'};
+    seperatorTokens = {' ', '.', ',', '"', '('};
 }
 
 Parser::~Parser()
@@ -50,6 +50,13 @@ void Parser::tokenizeFile(std::vector<std::string>& data_in, std::vector<std::ve
                     isSeperator = true;
                     a = seperatorTokens.size();
                 }
+                else if(isBracketOpen && c == '(' && bracketDepth == 1)
+                {
+                    if(!lineBuffer.empty())
+                        currentLine.emplace_back(lineBuffer);
+                    lineBuffer.clear();
+                    a = seperatorTokens.size();
+                }
             }
             if(!isSeperator || isQuotationOpen) //If not a separator, add to buffered word
             {
@@ -58,6 +65,15 @@ void Parser::tokenizeFile(std::vector<std::string>& data_in, std::vector<std::ve
         }
         if(!lineBuffer.empty())
             currentLine.emplace_back(lineBuffer);
+    }
+
+    //Process escape sequences
+    for(auto &a : data_out)
+    {
+        for(auto &b : a)
+        {
+            processEscapeSequences(b);
+        }
     }
 }
 
@@ -161,5 +177,26 @@ void Parser::extractBracket(std::string bracket, std::vector<std::string> &resul
             }
 
         }
+    }
+}
+
+void Parser::processEscapeSequences(std::string& data)
+{
+    replaceAll(data, "\\n", "\n"); //New line
+    replaceAll(data, "\\t", "\t"); //Horizontal tab
+    replaceAll(data, "\\v", "\v"); //Vertical tab
+    replaceAll(data, "\\b", "\b"); //Backspace
+    replaceAll(data, "\\r", "\r"); //Carriage return
+    replaceAll(data, "\\f", "\f"); //Form feed
+    replaceAll(data, "\\a", "\a"); //Alert
+}
+
+void Parser::replaceAll(std::string& source, const std::string& from, const std::string& to)
+{
+    size_t pos = 0;
+    while((pos = source.find(from, pos)) != std::string::npos)
+    {
+        source.replace(pos, from.size(), to);
+        pos += to.size();
     }
 }

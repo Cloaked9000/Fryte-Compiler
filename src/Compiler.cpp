@@ -58,18 +58,45 @@ void Compiler::processLine(const std::vector<std::string>& line)
         return;
 
     //Check to see what the line wants to do
-    if(line.front() == "Console")
+    if(line[0] == "Console")
         processConsole(line);
-    else if(stringToDataType(line.front()) != DataType::NIL || line.front() == "auto")
+    else if(stringToDataType(line[0]) != DataType::NIL || line[0] == "auto")
         processVariable(line);
-    else if(line.front() == "if")
+    else if(line[0] == "if")
         processIF(line);
-    else if((line.front() == "{" || line.front() == "}"))
+    else if((line[0] == "{" || line[0] == "}"))
         processScope(line);
     else if(isVariable(line.front()) != -1)
         processVariable(line);
-    else
-        throw std::string("Unknown instruction '" + line.front() + "'");
+    else if(line[0] == "goto" || line[0][line[0].size()-1] == ':')
+        processGoto(line);
+    else //Else unknown
+        throw std::string("Unknown instruction '" + line[0] + "'");
+}
+
+void Compiler::processGoto(const std::vector<std::string> &line)
+{
+    if(line[0] == "goto") //If going to a goto
+    {
+        bool gotoFound = false;
+        for(auto iter = std::begin(gotos); iter != std::end(gotos) && !gotoFound; iter++) //Find matching goto
+        {
+            if(iter->first == line[1]) //Goto identifier matches this one
+            {
+                bytecode.emplace_back(Instruction::GOTO);
+                bytecode.emplace_back(iter->second);
+                gotoFound = true;
+            }
+        }
+
+        if(!gotoFound) //No match found
+            throw std::string("Couldn't goto undeclared goto '" + line[1] + "'");
+    }
+    else //Else if creating a goto
+    {
+        //Store the goto, excluding the colon at the end for the identifier
+        gotos[line[0].substr(0, line[0].size()-1)] = bytecode.size();
+    }
 }
 
 void Compiler::processScope(const std::vector<std::string> &line)
@@ -316,11 +343,14 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     std::vector<std::string> arguments;
     std::string argumentBuffer;
     bool isQuoteOpen = false;
+
     //Take off surrounding brackets if any
     if(originalLine[0] == '(')
         originalLine.erase(0,1);
     if(originalLine[originalLine.size()-1] == ')')
         originalLine.erase(originalLine.size()-1, 1);
+
+    //Go through each character and split each argument into a separate vector element
     for(unsigned int c = 0; c < originalLine.size(); c++) //Ignore opening and close brackets
     {
         if(originalLine[c] == '"')
@@ -335,7 +365,6 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             argumentBuffer += originalLine[c];
         }
     }
-
     arguments.emplace_back(argumentBuffer);
     argumentBuffer.clear();
 
@@ -353,6 +382,7 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     //Parse each argument separately
     for(auto iter = arguments.rbegin(); iter != arguments.rend(); iter++)
     {
+        variablesOnStack = 0;
         const std::string &lineToParse = *iter;
         std::string line = parser.bracketOperatorFix(lineToParse);
         std::vector<std::string> components;
@@ -383,7 +413,7 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             handleSubSegment(subSegment);
         }
     }
-    variablesOnStack += oldVariablesOnStack;
+    variablesOnStack = oldVariablesOnStack + arguments.size();
     return 0;
 }
 
