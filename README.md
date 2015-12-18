@@ -14,7 +14,7 @@ Console output
 
 Console input
 
-If statements with support for the operators ==, !=, >, <, >= and <=.
+Conditional IF and WHILE statements with support for the operators ==, !=, >, <, >= and <=, and the logical operators OR (|) and AND (&)
 
 Gotos <- Have fun
 
@@ -28,23 +28,18 @@ string key = "password1"
 string entered
 int attemptsRemaining = 3
 
-int a = ((10 + 20) + (2))
-Console.print ("Result: ", ((10 + 20) + (2)), "\n")
-
-mypass:
-Console.print ("Enter the password: ")
-Console.scan (entered)
-if (entered == key)
+while((entered != key) & (attemptsRemaining > 0)) 
 {
-    Console.print ("Password was correct!")
-}
-if (entered != key)
-{
-    Console.print ("Password incorrect. Attempts remaining: ", attemptsRemaining, "\n")
-    attemptsRemaining -= 1
-    if (attemptsRemaining >= 0)
+    Console.print("Enter the password: ")
+    Console.scan(entered)
+    if(entered == key)
     {
-        goto mypass
+        Console.print("Password was correct!")
+    }
+    if(entered != key)
+    {
+        Console.print("Password incorrect. Attempts remaining: ", attemptsRemaining - 1, "\n")
+        attemptsRemaining -= 1
     }
 }
 ```

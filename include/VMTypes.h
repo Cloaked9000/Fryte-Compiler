@@ -26,7 +26,7 @@ enum Instruction
     COMPARE_MORE_THAN = 19, //Compare last two things on the stack and push true if object one is more than object two
     COMPARE_LESS_THAN_OR_EQUAL = 20, //Compare last two things on the stack and pushes true if object one is less than or equal to object two
     COMPARE_MORE_THAN_OR_EQUAL = 21, //Compare last two things on the stack and pushes true if object one is more than or equal to object two
-    COMPARE_AND = 22, //Compare the last X things on the stack and push true if they are both true. False otherwise. COMPARE_AND(NumberOfThings, 1, 2, 3...)
+    COMPARE_OR = 22, //Compare a series of values and return true if one of them is true. False otherwise. COMPARE_OR(numberOfThings, v1, v2, v3...)
 };
 
 //List of data types which the virtual machine supports
@@ -76,8 +76,10 @@ static Instruction stringToInstruction(const std::string& operation)
         return Instruction::COMPARE_LESS_THAN_OR_EQUAL;
     else if(operation == ">=")
         return Instruction::COMPARE_MORE_THAN_OR_EQUAL;
-    else if(operation == "&&")
-        return Instruction::COMPARE_AND;
+    else if(operation == "&")
+        return Instruction::COMPARE_EQUAL;
+    else if(operation == "|")
+        return Instruction::COMPARE_OR;
     return NONE; //Not found
 }
 
