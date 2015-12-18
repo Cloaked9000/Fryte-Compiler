@@ -37,7 +37,7 @@ bool Compiler::compile(std::vector<std::string> &data)
         }
         catch(const std::exception &e)
         {
-            std::cout << "\nAn internal exception occurred whilst compiling line: "  << line+1 << std::endl;
+            std::cout << "\nAn internal exception occurred whilst compiling line: "  << line+1 << "\n" << e.what() << std::endl;
             return false;
         }
         catch(...)
@@ -160,7 +160,6 @@ void Compiler::processWhile(const std::vector<std::string>& line)
 void Compiler::processIF(const std::vector<std::string>& line)
 {
     evaluateBracket(line[1]);
-    std::cout << "\nEvaluating: " << line[1];
     bytecode.emplace_back(Instruction::CONDITIONAL_IF);
     bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
     expectedScopeType.type = Scope::IF;
@@ -322,6 +321,16 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             {
                 bytecode.emplace_back(Instruction::CREATE_CHAR);
                 bytecode.emplace_back(data[1]);
+            }
+            else if(data == "true") //If boolean
+            {
+                bytecode.emplace_back(Instruction::CREATE_BOOL);
+                bytecode.emplace_back(1);
+            }
+            else if(data == "false") //If boolean
+            {
+                bytecode.emplace_back(Instruction::CREATE_BOOL);
+                bytecode.emplace_back(0);
             }
             else //Else if number
             {

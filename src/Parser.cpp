@@ -139,45 +139,86 @@ std::string Parser::bracketOperatorFix(const std::string &data)
     return returnValue;
 }
 
-void Parser::extractBracket(std::string bracket, std::vector<std::string> &results)
+void Parser::extractBracket(const std::string &bracket, std::vector<std::string> &results)
 {
-    //Ensure that data is not empty
+    //If there's nothing in the bracket, nothing to do
     if(bracket.empty())
         return;
 
-    //Now extract all bracket contents
+    //Initialise variables
+    int bracketStartPos = -1;
+    unsigned int bracketStartLayer = -1;
     unsigned int bracketDepth = 0;
-    unsigned int bracketBeginPos = 0;
+    std::string bracketBuffer;
+    std::string bracketOperator;
+    bool isQuoteOpen = false;
+
+    //Iterate through each character in the vector and process it
     for(unsigned int a = 0; a < bracket.size(); a++)
     {
-        //Each operator gets its own element in the results
-        if(stringToInstruction(std::string(1, bracket[a])) != -1 && bracketDepth == 0)
-            results.emplace_back(std::string(1, bracket[a]));
+        //Keep track of if quotes are open
+        if(bracket[a] == '"')
+            isQuoteOpen = !isQuoteOpen;
 
-        //If another bracket layer is opening, keep track of the bracket depth
-        else if(bracket[a] == '(')
+        //If a bracket is open, add the data to the bracket buffer
+        if(bracketStartPos != -1)
+            bracketBuffer += bracket[a];
+
+        //Else if dual-character operator. Temporary fix.
+        else if(!isQuoteOpen && a != bracket.size() && stringToInstruction(bracket.substr(a, 2)) != -1)
         {
-            if(bracketDepth == 0)
-                bracketBeginPos = a+1;
-            bracketDepth++;
+            bracketOperator = bracket.substr(a, 2);
+            a++;
         }
-        //If the current bracket is closing, keep track of current depth
-        else if(bracket[a] == ')')
-        {
-            bracketDepth--;
-            if(bracketDepth == 0) //If we've reached the end of the first bracket we checked
-            {
-                //Extract the bracket
-                std::string foundBracket = bracket.substr(bracketBeginPos, a-bracketBeginPos);
-                size_t found = foundBracket.find('(');
-                if(found == std::string::npos)
-                    results.emplace_back(foundBracket); //Emplace data if the extracted bracket doesn't contain another bracket
-                else
-                    extractBracket(foundBracket, results); //If it does contain another bracket, recursively call extractBracket on it
-            }
 
+        //Else if a single-character operator, don't add the operator to the return value and store this layer's operator
+        else if(!isQuoteOpen && stringToInstruction(bracket.substr(a, 1)) != -1)
+        {
+            bracketOperator = bracket.substr(a, 1);
+        }
+
+        //If quotes are not open do these checks
+        if(!isQuoteOpen)
+        {
+            if(bracket[a] == '(') //If bracket open, increase bracket layer
+            {
+                if(bracketStartPos == -1) //If no bracket open, set current bracket variables
+                {
+                    bracketStartLayer = bracketDepth;
+                    bracketStartPos = a;
+                }
+                bracketDepth++;
+            }
+            else if(bracket[a] == ')') //If bracket close, decrease bracket depth and process the closed bracket
+            {
+                bracketDepth--;
+                if(bracketDepth == bracketStartLayer) //If the current bracket is ending
+                {
+                    if(bracketBuffer.find("(") == std::string::npos) //If there's NOT a sub bracket
+                    {
+                        if(!bracketBuffer.empty()) //And the bracket buffer isn't empty
+                        {
+                            bracketBuffer.erase(bracketBuffer.size()-1, 1); //Remove the ending ')'
+                            results.emplace_back(bracketBuffer); //Then store the bracket
+                        }
+                    }
+                    else //Else it contains a sub-bracket so recursively extract it
+                    {
+                        extractBracket(bracketBuffer, results);
+                    }
+
+                    //Reset current bracket variables for parsing the next one
+                    bracketStartLayer = -1;
+                    bracketStartPos = -1;
+                    bracketBuffer.clear();
+                }
+            }
         }
     }
+
+    //If the bracket contained an operator, add it back to the end
+    if(!bracketOperator.empty())
+        results.emplace_back(bracketOperator);
 }
 
 void Parser::processEscapeSequences(std::string& data)
