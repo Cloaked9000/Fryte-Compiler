@@ -14,7 +14,7 @@ Console output
 
 Console input
 
-Conditional IF and WHILE statements with support for the operators ==, !=, >, <, >= and <=, and the logical operators OR (|) and AND (&)
+Conditional IF, ELSE and WHILE statements with support for the operators ==, !=, >, <, >= and <=, and the logical operators OR (|) and AND (&)
 
 Gotos <- Have fun
 
@@ -36,7 +36,7 @@ while((entered != key) & (attemptsRemaining > 0))
     {
         Console.print("Password was correct!")
     }
-    if(entered != key)
+    else
     {
         Console.print("Password incorrect. Attempts remaining: ", attemptsRemaining - 1, "\n")
         attemptsRemaining -= 1
