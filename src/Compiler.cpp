@@ -74,6 +74,8 @@ void Compiler::processLine(const std::vector<std::string>& line)
         processWhile(line);
     else if(line[0] == "else")
         processElse(line);
+    else if(line[0] == "for")
+        processFor(line);
     else //Else unknown
         throw std::string("Unknown instruction '" + line[0] + "'");
 }
@@ -116,7 +118,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
             bytecode[previousScope.startPos-1] += 2;
         }
 
-        scopes.emplace_back(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, variableStack.size(), expectedScopeType.type));
+        scopes.emplace_back(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, variableStack.size(), expectedScopeType.incrementor, expectedScopeType.type));
         scopeDepth++;
     }
     else if(line[0] == "}") //Scope close
@@ -134,13 +136,27 @@ void Compiler::processScope(const std::vector<std::string> &line)
             if(current.scopeDepth == scopeDepth) //We've found the scope that's ending
             {
                 current.endPos = bytecode.size();
-                if(current.type == Scope::IF) //If an IF statement is ending
+                if(current.type == Scope::IF) //If an IF scope is ending
                 {
+                    //Set the bytecode position to seek to if the IF statement should not run
                     bytecode[current.startPos-1] = bytecode.size()-1;
-                    std::cout << "\nIF ending at: " << bytecode.size();
                 }
-                else if(current.type == Scope::WHILE) //If a WHILE statement is ending
+                else if(current.type == Scope::WHILE) //If a WHILE scope is ending
                 {
+                    //Add the instructions to loop back around to the beginning of the for
+                    bytecode.emplace_back(Instruction::GOTO);
+                    bytecode.emplace_back(current.statementPos);
+                    bytecode[current.startPos-1] = bytecode.size()-1;
+                }
+                else if(current.type == Scope::FOR) //If a FOR scope is ending
+                {
+                    //Parse and insert increment instructions
+                    std::vector<std::string> arguments = parser.extractBracketArguments(current.incrementor);
+                    std::vector<std::vector<std::string>> initialisationArguments;
+                    parser.tokenizeFile({arguments[0]}, initialisationArguments);
+
+                    //Add the instructions to loop back around to the beginning of the for
+                    processVariable(initialisationArguments[0]);
                     bytecode.emplace_back(Instruction::GOTO);
                     bytecode.emplace_back(current.statementPos);
                     bytecode[current.startPos-1] = bytecode.size()-1;
@@ -148,8 +164,10 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 else if(current.type == Scope::ELSE)
                 {
                     Scope &previousScope = pastScopes.back(); // Get preceding scope
-                    bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous else's goto to this point after the else
+                    bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous if's goto to this point after the else
                 }
+
+                //Store the scope in pastScopes and erase it from currentScopes as it's no longer open
                 pastScopes.emplace_back(*iter);
                 iter = scopes.erase(iter);
                 break;
@@ -165,6 +183,31 @@ void Compiler::processScope(const std::vector<std::string> &line)
     {
         throw std::string("Error processing scope change, unknown operator '" + line[0] + "'");
     }
+}
+
+void Compiler::processFor(const std::vector<std::string>& line)
+{
+    //Extract arguments
+    std::vector<std::string> arguments = parser.extractBracketArguments(line[1]);
+    std::vector<std::vector<std::string>> initialisationArguments;
+
+    //The for loop initialisation data must be parsed first and then passed to processVariable
+    parser.tokenizeFile({arguments[0]}, initialisationArguments);
+    processVariable(initialisationArguments[0]);
+
+    //We set the statement position AFTER the loop initialisation, as we don't want the it to initialise every loop
+    expectedScopeType.statementPos = bytecode.size();
+
+    //Evaluate the condition of the loop
+    evaluateBracket("(" + arguments[1] + ")");
+
+    //Add the conditional IF instructions
+    bytecode.emplace_back(Instruction::CONDITIONAL_IF);
+    bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
+
+    //Set the expected scope data
+    expectedScopeType.incrementor = "(" + arguments[2] + ")";
+    expectedScopeType.type = Scope::FOR;
 }
 
 void Compiler::processElse(const std::vector<std::string>& line)
@@ -399,42 +442,13 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             variablesOnStack += segments.size()-1;
         }
     };
-    //Split each argument up first
-    std::vector<std::string> arguments;
-    std::string argumentBuffer;
-    bool isQuoteOpen = false;
 
-    //Take off surrounding brackets if any
-    if(originalLine[0] == '(')
-        originalLine.erase(0,1);
-    if(originalLine[originalLine.size()-1] == ')')
-        originalLine.erase(originalLine.size()-1, 1);
+    //Split the arguments
+    std::vector<std::string> &&arguments = parser.extractBracketArguments(originalLine);
 
-    //Go through each character and split each argument into a separate vector element
-    for(unsigned int c = 0; c < originalLine.size(); c++) //Ignore opening and close brackets
-    {
-        if(originalLine[c] == '"')
-            isQuoteOpen = !isQuoteOpen;
-        if(originalLine[c] == ',' && !argumentBuffer.empty() && !isQuoteOpen)
-        {
-            arguments.emplace_back(argumentBuffer);
-            argumentBuffer.clear();
-        }
-        else
-        {
-            argumentBuffer += originalLine[c];
-        }
-    }
-    arguments.emplace_back(argumentBuffer);
-    argumentBuffer.clear();
-
-    //Process brackets in each argument
+    //Bracket all arguments
     for(auto &arg : arguments)
     {
-        while(arg[0] == ' ')
-                arg.erase(0,1);
-        while(arg[arg.size()-1] == ' ')
-            arg.erase(arg.size()-1, 1);
         arg.insert(0, "(");
         arg += ")";
     }

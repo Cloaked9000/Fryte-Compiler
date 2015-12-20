@@ -100,10 +100,10 @@ struct Scope
 {
     enum ScopeType
     {
-        IF, WHILE, ELSE
+        IF, WHILE, ELSE, FOR
     };
     Scope()=default;
-    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, ScopeType &t)
+    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, std::string sincrem, ScopeType &t)
     {
         statementPos = statPos;
         startPos = spos;
@@ -111,6 +111,7 @@ struct Scope
         stackSize = ssize;
         type = t;
         endPos = 0;
+        incrementor = sincrem;
     }
     ScopeType type;
     unsigned int startPos;
@@ -118,5 +119,6 @@ struct Scope
     unsigned int statementPos;
     unsigned int stackSize;
     unsigned int endPos;
+    std::string incrementor;
 };
 #endif // VMTYPES_H

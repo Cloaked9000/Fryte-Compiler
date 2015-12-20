@@ -49,7 +49,9 @@ class Compiler
 
         void processScope(const std::vector<std::string> &line); //Process scope changes
 
-        void processWhile(const std::vector<std::string> &line); //Processes a while loop
+        void processWhile(const std::vector<std::string> &line); //Process a while loop
+
+        void processFor(const std::vector<std::string> &line); //Process a for loop
 
         unsigned int evaluateBracket(std::string line); //Converts bracket information into stack instructions. Returns the number of things added to the stack.
 };

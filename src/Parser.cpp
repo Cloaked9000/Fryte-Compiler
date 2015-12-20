@@ -11,7 +11,7 @@ Parser::~Parser()
     //dtor
 }
 
-void Parser::tokenizeFile(std::vector<std::string>& data_in, std::vector<std::vector<std::string>>& data_out)
+void Parser::tokenizeFile(const std::vector<std::string>& data_in, std::vector<std::vector<std::string>>& data_out)
 {
     for(const auto &line : data_in) //Iterate through each line
     {
@@ -240,4 +240,45 @@ void Parser::replaceAll(std::string& source, const std::string& from, const std:
         source.replace(pos, from.size(), to);
         pos += to.size();
     }
+}
+
+std::vector<std::string> Parser::extractBracketArguments(std::string data)
+{
+    std::vector<std::string> arguments;
+    std::string argumentBuffer;
+    bool isQuoteOpen = false;
+
+    //Take off surrounding brackets if any as these aren't needed in the split results
+    if(data[0] == '(')
+        data.erase(0,1);
+    if(data[data.size()-1] == ')')
+        data.erase(data.size()-1, 1);
+
+    //Go through each character and split each argument into a separate vector element
+    for(unsigned int c = 0; c < data.size(); c++) //Ignore opening and close brackets
+    {
+        if(data[c] == '"')
+            isQuoteOpen = !isQuoteOpen;
+        if(data[c] == ',' && !argumentBuffer.empty() && !isQuoteOpen)
+        {
+            arguments.emplace_back(argumentBuffer);
+            argumentBuffer.clear();
+        }
+        else
+        {
+            argumentBuffer += data[c];
+        }
+    }
+    arguments.emplace_back(argumentBuffer);
+
+    //Fix the spacing
+    for(auto &arg : arguments)
+    {
+        while(arg[0] == ' ')
+            arg.erase(0,1);
+        while(arg[arg.size()-1] == ' ')
+            arg.erase(arg.size()-1, 1);
+    }
+
+    return arguments;
 }
