@@ -100,19 +100,23 @@ struct Scope
 {
     enum ScopeType
     {
-        IF, WHILE
+        IF, WHILE, ELSE
     };
     Scope()=default;
-    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, ScopeType &t)
+    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, ScopeType &t)
     {
         statementPos = statPos;
         startPos = spos;
         scopeDepth = sdep;
+        stackSize = ssize;
         type = t;
+        endPos = 0;
     }
     ScopeType type;
     unsigned int startPos;
     int scopeDepth;
     unsigned int statementPos;
+    unsigned int stackSize;
+    unsigned int endPos;
 };
 #endif // VMTYPES_H

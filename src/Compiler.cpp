@@ -72,6 +72,8 @@ void Compiler::processLine(const std::vector<std::string>& line)
         processGoto(line);
     else if(line[0] == "while")
         processWhile(line);
+    else if(line[0] == "else")
+        processElse(line);
     else //Else unknown
         throw std::string("Unknown instruction '" + line[0] + "'");
 }
@@ -106,7 +108,15 @@ void Compiler::processScope(const std::vector<std::string> &line)
     //map<key><startDepth, beginPos>
     if(line[0] == "{") //Scope open
     {
-        scopes.emplace_back(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, expectedScopeType.type));
+        if(expectedScopeType.type == Scope::ELSE)
+        {
+            Scope &previousScope = pastScopes.back(); // Get preceding scope
+            bytecode.insert(bytecode.begin() + previousScope.endPos++, Instruction::GOTO);
+            bytecode.insert(bytecode.begin() + previousScope.endPos++, 0); //0 for now, this will be filled in later
+            bytecode[previousScope.startPos-1] += 2;
+        }
+
+        scopes.emplace_back(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, variableStack.size(), expectedScopeType.type));
         scopeDepth++;
     }
     else if(line[0] == "}") //Scope close
@@ -123,9 +133,11 @@ void Compiler::processScope(const std::vector<std::string> &line)
             Scope &current = *iter;
             if(current.scopeDepth == scopeDepth) //We've found the scope that's ending
             {
+                current.endPos = bytecode.size();
                 if(current.type == Scope::IF) //If an IF statement is ending
                 {
                     bytecode[current.startPos-1] = bytecode.size()-1;
+                    std::cout << "\nIF ending at: " << bytecode.size();
                 }
                 else if(current.type == Scope::WHILE) //If a WHILE statement is ending
                 {
@@ -133,7 +145,14 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     bytecode.emplace_back(current.statementPos);
                     bytecode[current.startPos-1] = bytecode.size()-1;
                 }
+                else if(current.type == Scope::ELSE)
+                {
+                    Scope &previousScope = pastScopes.back(); // Get preceding scope
+                    bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous else's goto to this point after the else
+                }
+                pastScopes.emplace_back(*iter);
                 iter = scopes.erase(iter);
+                break;
             }
             else
             {
@@ -148,6 +167,11 @@ void Compiler::processScope(const std::vector<std::string> &line)
     }
 }
 
+void Compiler::processElse(const std::vector<std::string>& line)
+{
+    expectedScopeType.type = Scope::ELSE;
+}
+
 void Compiler::processWhile(const std::vector<std::string>& line)
 {
     expectedScopeType.statementPos = bytecode.size();
@@ -159,11 +183,11 @@ void Compiler::processWhile(const std::vector<std::string>& line)
 
 void Compiler::processIF(const std::vector<std::string>& line)
 {
+    expectedScopeType.statementPos = bytecode.size();
     evaluateBracket(line[1]);
     bytecode.emplace_back(Instruction::CONDITIONAL_IF);
     bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
     expectedScopeType.type = Scope::IF;
-    expectedScopeType.statementPos = bytecode.size();
 }
 
 void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)

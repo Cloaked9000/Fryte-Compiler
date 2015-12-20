@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 #include <unordered_map>
+#include <iterator>
 
 #include "Parser.h"
 #include "BytecodeIO.h"
@@ -23,9 +24,10 @@ class Compiler
         std::vector<unsigned char> bytecode; //Keeps track of bytecode to write to file
         std::vector<Variable> variableStack; //Keeps track of variable position on the stack to be
         std::vector<Scope> scopes; //Keeps track of open scopes
+        std::vector<Scope> pastScopes; //Keep a log of past scopes
         std::unordered_map<std::string, unsigned int> gotos; //Keeps track of created gotos. map<identifier, bytecodePos>
         int scopeDepth = 0; //Keeps track of current scope depth
-        Scope expectedScopeType; //Keeps track of what the next expected scope type is
+        Scope expectedScopeType; //Keeps track of scopes
 
         unsigned int variablesOnStack = 0;
 
@@ -42,6 +44,8 @@ class Compiler
         void processConsole(const std::vector<std::string> &line); //Console.*
 
         void processIF(const std::vector<std::string> &line); //Conditional if statements
+
+        void processElse(const std::vector<std::string> &line); //Process else statements
 
         void processScope(const std::vector<std::string> &line); //Process scope changes
 
