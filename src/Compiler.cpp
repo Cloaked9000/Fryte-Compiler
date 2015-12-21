@@ -133,6 +133,11 @@ void Compiler::processScope(const std::vector<std::string> &line)
         for(auto iter = scopes.begin(); iter != scopes.end();)
         {
             Scope &current = *iter;
+
+            //Remove variables created in the scope
+            bytecode.emplace_back(Instruction::STACK_WALK);
+            bytecode.emplace_back(current.stackSize);
+
             if(current.scopeDepth == scopeDepth) //We've found the scope that's ending
             {
                 current.endPos = bytecode.size();
@@ -165,6 +170,14 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 {
                     Scope &previousScope = pastScopes.back(); // Get preceding scope
                     bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous if's goto to this point after the else
+                }
+                else if(current.type == Scope::FUNCTION)
+                {
+
+                }
+                else
+                {
+                    throw std::string("Ending unknown scope type");
                 }
 
                 //Store the scope in pastScopes and erase it from currentScopes as it's no longer open
@@ -244,7 +257,14 @@ void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
 void Compiler::processVariable(const std::vector<std::string>& line) //things like "int a = 20"
 {
     DataType possibleType = stringToDataType(line[0]);
-    if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
+    if(possibleType != DataType::NIL && line[2][0] == '(') //If it's a function
+    {
+        //Add the function
+        variableStack.emplace_back(Variable(line[1], possibleType));
+        expectedScopeType.type = Scope::FUNCTION;
+        expectedScopeType.incrementor = line[2];
+    }
+    else if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
     {
         //First move the variable that we're multiplying by to the top of the stack for the multiplication
         bytecode.emplace_back(Instruction::CLONE_TOP);
