@@ -7,6 +7,7 @@
 #include <utility>
 #include <unordered_map>
 #include <iterator>
+#include <algorithm>
 
 #include "Parser.h"
 #include "BytecodeIO.h"
@@ -25,6 +26,7 @@ class Compiler
         std::vector<Variable> variableStack; //Keeps track of variable position on the stack to be
         std::vector<Scope> scopes; //Keeps track of open scopes
         std::vector<Scope> pastScopes; //Keep a log of past scopes
+        std::vector<Variable> functions; //Keeps track of defined functions
         std::unordered_map<std::string, unsigned int> gotos; //Keeps track of created gotos. map<identifier, bytecodePos>
         int scopeDepth = 0; //Keeps track of current scope depth
         Scope expectedScopeType; //Keeps track of scopes
@@ -33,7 +35,11 @@ class Compiler
 
         void validateArgumentCount(unsigned int expected, unsigned int got);
 
+        int isFunction(const std::string& identifier);
+
         void processVariable(const std::vector<std::string>& line);
+
+        void processFunction(const std::vector<std::string>& line);
 
         void processGoto(const std::vector<std::string> &line);
 

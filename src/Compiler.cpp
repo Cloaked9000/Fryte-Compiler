@@ -20,8 +20,23 @@ int Compiler::isVariable(const std::string& identifier)
     return -1; //Not found
 }
 
+int Compiler::isFunction(const std::string& identifier)
+{
+    for(unsigned int a = 0; a < functions.size(); a++)
+    {
+        if(functions[a].identifier == identifier)
+            return a; //Found, return position
+    }
+    return -1; //Not found
+}
+
 bool Compiler::compile(std::vector<std::string> &data)
 {
+    //Reserve space for the entry point goto
+    bytecode.emplace_back(Instruction::GOTO);
+    bytecode.emplace_back(0);
+
+    //Compile the data
     std::vector<std::vector<std::string>> parsedFile;
     parser.tokenizeFile(data, parsedFile);
     for(unsigned int line = 0; line < parsedFile.size(); line++)
@@ -60,7 +75,7 @@ void Compiler::processLine(const std::vector<std::string>& line)
     //Check to see what the line wants to do
     if(line[0] == "Console")
         processConsole(line);
-    else if(stringToDataType(line[0]) != DataType::NIL || line[0] == "auto")
+    else if((stringToDataType(line[0]) != DataType::NIL || line[0] == "auto") && !(line.size() > 2 && line[2][0] == '('))
         processVariable(line);
     else if(line[0] == "if")
         processIF(line);
@@ -76,8 +91,10 @@ void Compiler::processLine(const std::vector<std::string>& line)
         processElse(line);
     else if(line[0] == "for")
         processFor(line);
+    else if(isFunction(line[0]) != -1 || (line.size() > 2 && line[2][0] == '('))
+        processFunction(line);
     else //Else unknown
-        throw std::string("Unknown instruction '" + line[0] + "'");
+        throw std::string("'" + line[0] + "' is undefined");
 }
 
 void Compiler::processGoto(const std::vector<std::string> &line)
@@ -118,7 +135,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
             bytecode[previousScope.startPos-1] += 2;
         }
 
-        scopes.emplace_back(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, variableStack.size(), expectedScopeType.incrementor, expectedScopeType.type));
+        scopes.emplace_back(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, variableStack.size(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.type));
         scopeDepth++;
     }
     else if(line[0] == "}") //Scope close
@@ -134,13 +151,20 @@ void Compiler::processScope(const std::vector<std::string> &line)
         {
             Scope &current = *iter;
 
-            //Remove variables created in the scope
-            bytecode.emplace_back(Instruction::STACK_WALK);
-            bytecode.emplace_back(current.stackSize);
-
             if(current.scopeDepth == scopeDepth) //We've found the scope that's ending
             {
+                //Remove variables created in the scope
+                bytecode.emplace_back(Instruction::STACK_WALK);
+                bytecode.emplace_back(current.stackSize);
+
+                //Remove variables registered with the compiler during this scope
+                unsigned int removeTotal = variableStack.size() - current.stackSize;
+                variableStack.erase(variableStack.end()-removeTotal, variableStack.end());
+
+                //Set the scope end position
                 current.endPos = bytecode.size();
+
+                //Handle the scope end differently depending on its type
                 if(current.type == Scope::IF) //If an IF scope is ending
                 {
                     //Set the bytecode position to seek to if the IF statement should not run
@@ -173,7 +197,11 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 }
                 else if(current.type == Scope::FUNCTION)
                 {
-
+                    //Insert the dynamic goto IF there's a function to go back to
+                    if(current.identifier != "entry")
+                    {
+                        bytecode.emplace_back(Instruction::DYNAMIC_GOTO);
+                    }
                 }
                 else
                 {
@@ -254,17 +282,43 @@ void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
     }
 }
 
+void Compiler::processFunction(const std::vector<std::string>& line)
+{
+    DataType possibleType = stringToDataType(line[0]);
+    if(possibleType != DataType::NIL && line.size() > 2 && line[2][0] == '(') //If we're defining a function
+    {
+        std::cout << "\nDefining function: " << line[1];
+        //Add the function
+        functions.emplace_back(Variable(line[1], possibleType));
+        expectedScopeType.type = Scope::FUNCTION;
+        expectedScopeType.identifier = line[1];
+        expectedScopeType.incrementor = line[2];
+
+        //If this is the program entry point, update the entry point goto position
+        if(line[1] == "entry")
+            bytecode[1] = bytecode.size();
+    }
+    else
+    {
+        std::cout << "\nCalling function: " << line[0];
+
+        //Find the function's starting point from lastScopes
+        auto scope = std::find_if(pastScopes.begin(), pastScopes.end(), [&] (const Scope &next) {if(next.identifier == line[0]){return true;}return false;});
+        if(scope == pastScopes.end())
+            throw std::string("Failed to find entry point for requested function call");
+
+        //Add in the goto to set the bytecode position to the beginning of the function
+        bytecode.emplace_back(Instruction::CREATE_INT);
+        bytecode.emplace_back(bytecode.size());
+        bytecode.emplace_back(Instruction::GOTO);
+        bytecode.emplace_back(scope->startPos);
+    }
+}
+
 void Compiler::processVariable(const std::vector<std::string>& line) //things like "int a = 20"
 {
     DataType possibleType = stringToDataType(line[0]);
-    if(possibleType != DataType::NIL && line[2][0] == '(') //If it's a function
-    {
-        //Add the function
-        variableStack.emplace_back(Variable(line[1], possibleType));
-        expectedScopeType.type = Scope::FUNCTION;
-        expectedScopeType.incrementor = line[2];
-    }
-    else if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
+    if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
     {
         //First move the variable that we're multiplying by to the top of the stack for the multiplication
         bytecode.emplace_back(Instruction::CLONE_TOP);
