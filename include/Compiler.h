@@ -26,6 +26,7 @@ class Compiler
         std::vector<Variable> variableStack; //Keeps track of variable position on the stack to be
         std::vector<Scope> scopes; //Keeps track of open scopes
         std::vector<Scope> pastScopes; //Keep a log of past scopes
+        std::vector<Scope> functionStack; //Keeps track of function depth
         std::vector<Variable> functions; //Keeps track of defined functions
         std::unordered_map<std::string, unsigned int> gotos; //Keeps track of created gotos. map<identifier, bytecodePos>
         int scopeDepth = 0; //Keeps track of current scope depth

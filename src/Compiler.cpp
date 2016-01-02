@@ -34,7 +34,7 @@ bool Compiler::compile(std::vector<std::string> &data)
 {
     //Reserve space for the entry point goto
     bytecode.emplace_back(Instruction::GOTO);
-    bytecode.emplace_back(0);
+    bytecode.emplace_back(2); //Two by default, so even if no entry point is defined it wont go into a loop
 
     //Compile the data
     std::vector<std::vector<std::string>> parsedFile;
@@ -62,6 +62,7 @@ bool Compiler::compile(std::vector<std::string> &data)
         }
     }
 
+    //Save to file
     BytecodeIO::writeBytecode("out.fry", &bytecode);
     return true;
 }
@@ -127,6 +128,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
     //map<key><startDepth, beginPos>
     if(line[0] == "{") //Scope open
     {
+        Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, variableStack.size(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.type));
         if(expectedScopeType.type == Scope::ELSE)
         {
             Scope &previousScope = pastScopes.back(); // Get preceding scope
@@ -134,8 +136,12 @@ void Compiler::processScope(const std::vector<std::string> &line)
             bytecode.insert(bytecode.begin() + previousScope.endPos++, 0); //0 for now, this will be filled in later
             bytecode[previousScope.startPos-1] += 2;
         }
+        else if(expectedScopeType.type == Scope::FUNCTION)
+        {
+            functionStack.emplace_back(newScope);
+        }
 
-        scopes.emplace_back(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, variableStack.size(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.type));
+        scopes.emplace_back(newScope);
         scopeDepth++;
     }
     else if(line[0] == "}") //Scope close
@@ -153,13 +159,17 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
             if(current.scopeDepth == scopeDepth) //We've found the scope that's ending
             {
-                //Remove variables created in the scope
-                bytecode.emplace_back(Instruction::STACK_WALK);
-                bytecode.emplace_back(current.stackSize);
+                //Called to clear this scope's variables
+                auto clearScopeVariables = [&]()
+                {
+                    //Remove variables created in the scope
+                    bytecode.emplace_back(Instruction::STACK_WALK);
+                    bytecode.emplace_back(current.stackSize);
 
-                //Remove variables registered with the compiler during this scope
-                unsigned int removeTotal = variableStack.size() - current.stackSize;
-                variableStack.erase(variableStack.end()-removeTotal, variableStack.end());
+                    //Remove variables registered with the compiler during this scope
+                    unsigned int removeTotal = variableStack.size() - current.stackSize;
+                    variableStack.erase(variableStack.end()-removeTotal, variableStack.end());
+                };
 
                 //Set the scope end position
                 current.endPos = bytecode.size();
@@ -167,11 +177,15 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 //Handle the scope end differently depending on its type
                 if(current.type == Scope::IF) //If an IF scope is ending
                 {
+                    clearScopeVariables();
+
                     //Set the bytecode position to seek to if the IF statement should not run
                     bytecode[current.startPos-1] = bytecode.size()-1;
                 }
                 else if(current.type == Scope::WHILE) //If a WHILE scope is ending
                 {
+                    clearScopeVariables();
+
                     //Add the instructions to loop back around to the beginning of the for
                     bytecode.emplace_back(Instruction::GOTO);
                     bytecode.emplace_back(current.statementPos);
@@ -179,6 +193,8 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 }
                 else if(current.type == Scope::FOR) //If a FOR scope is ending
                 {
+                    clearScopeVariables();
+
                     //Parse and insert increment instructions
                     std::vector<std::string> arguments = parser.extractBracketArguments(current.incrementor);
                     std::vector<std::vector<std::string>> initialisationArguments;
@@ -192,16 +208,26 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 }
                 else if(current.type == Scope::ELSE)
                 {
+                    clearScopeVariables();
+
                     Scope &previousScope = pastScopes.back(); // Get preceding scope
                     bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous if's goto to this point after the else
                 }
                 else if(current.type == Scope::FUNCTION)
                 {
-                    //Insert the dynamic goto IF there's a function to go back to
-                    if(current.identifier != "entry")
-                    {
+                    // *variables are cleaned up by the caller, not at the end of the function!*
+
+                    //Get scope to return to from function stack
+                    Scope endingScope = functionStack.back();
+                    functionStack.pop_back();
+
+                    //Bring exit point to top
+                    bytecode.emplace_back(Instruction::CLONE_TOP);
+                    bytecode.emplace_back(endingScope.stackSize);
+
+                    //Insert the dynamic goto IF it's not the program entry point
+                    if(endingScope.identifier != "entry")
                         bytecode.emplace_back(Instruction::DYNAMIC_GOTO);
-                    }
                 }
                 else
                 {
@@ -287,7 +313,6 @@ void Compiler::processFunction(const std::vector<std::string>& line)
     DataType possibleType = stringToDataType(line[0]);
     if(possibleType != DataType::NIL && line.size() > 2 && line[2][0] == '(') //If we're defining a function
     {
-        std::cout << "\nDefining function: " << line[1];
         //Add the function
         functions.emplace_back(Variable(line[1], possibleType));
         expectedScopeType.type = Scope::FUNCTION;
@@ -300,18 +325,48 @@ void Compiler::processFunction(const std::vector<std::string>& line)
     }
     else
     {
-        std::cout << "\nCalling function: " << line[0];
-
         //Find the function's starting point from lastScopes
-        auto scope = std::find_if(pastScopes.begin(), pastScopes.end(), [&] (const Scope &next) {if(next.identifier == line[0]){return true;}return false;});
-        if(scope == pastScopes.end())
-            throw std::string("Failed to find entry point for requested function call");
+        Scope *scope; //Scope we're calling
+        auto scopeIter = std::find_if(pastScopes.begin(), pastScopes.end(), [&] (const Scope &next) {if(next.identifier == line[0]){return true;}return false;});
+        if(scopeIter == pastScopes.end()) //If it wasn't found in last scopes
+        {
+            if(expectedScopeType.identifier == line[0]) //If we're recursively calling the current scope
+            {
+                scope = &expectedScopeType; //Set found scope pointer to current scope
+            }
+            else //Else not found
+            {
+                throw std::string("Failed to find entry point for '" + line[0] + "'");
+            }
+        }
+        else
+        {
+            scope = &(*scopeIter); //Set found scope pointer to the correct past scope
+        }
 
         //Add in the goto to set the bytecode position to the beginning of the function
+        unsigned int stackSizeBeforeFunction = variableStack.size();
+
+        //Create the exit point
+        variableStack.emplace_back(Variable("functionEnd", DataType::INT));
         bytecode.emplace_back(Instruction::CREATE_INT);
-        bytecode.emplace_back(bytecode.size());
+        bytecode.emplace_back(bytecode.size()+3); //Add a bit for the stack walk below
+
+        //Goto the function
         bytecode.emplace_back(Instruction::GOTO);
         bytecode.emplace_back(scope->startPos);
+
+
+        //Insert cleaning code
+        unsigned int removeTotal = (variableStack.size() - scope->stackSize) + stackSizeBeforeFunction;
+        for(int a = variableStack.size()-removeTotal; a < removeTotal; a++)
+        {
+            std::cout << "\nRemoving: " << variableStack.back().identifier;
+            variableStack.pop_back();
+        }
+       // variableStack.erase(variableStack.end()-removeTotal, variableStack.end());
+        bytecode.emplace_back(Instruction::STACK_WALK);
+        bytecode.emplace_back(pastScopes.back().stackSize);
     }
 }
 
