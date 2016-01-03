@@ -32,6 +32,8 @@ enum Instruction
     COMPARE_OR = 22, //Compare a series of values and return true if one of them is true. False otherwise. COMPARE_OR(numberOfThings, v1, v2, v3...)
     STACK_WALK = 23, //Sets the current stack size, STACK_WALK(pos)
     DYNAMIC_GOTO = 24, //Sets the bytecode to a position which is found on top of the stack. DYNAMIC_GOTO(pos)
+    TO_INTEGER = 25, //Converts the value on the top of the stack to a string and pushes the new value
+    TO_STRING = 26, //Converts the value on the top of the stack to an integer and then pushes the new value
 };
 
 //List of data types which the virtual machine supports

@@ -375,43 +375,51 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
     DataType possibleType = stringToDataType(line[0]);
     if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
     {
-        //First move the variable that we're multiplying by to the top of the stack for the multiplication
-        bytecode.emplace_back(Instruction::CLONE_TOP);
-        bytecode.emplace_back(isVariable(line[0]));
+        if(line[1] == "=") //If it's a set operation
+        {
+            //Evaluate the bracket containing what the variable should be set to
+            evaluateBracket("(" + line[2] + ")");
+        }
+        else //Else if it's a math operation
+        {
+            //First move the variable that we're multiplying by to the top of the stack for the operation
+            bytecode.emplace_back(Instruction::CLONE_TOP);
+            bytecode.emplace_back(isVariable(line[0]));
 
-        //Evaluate the bracket containing what the variable should be set to
-        evaluateBracket("(" + line[2] + ")");
+            //Evaluate the bracket containing what the variable should be set to
+            evaluateBracket("(" + line[2] + ")");
 
-        //Do different things depending on the assignment operator
-        if(line[1] == "*=")
-        {
-            //Multiple the last two things on the stack (the bracket and the variable)
-            bytecode.emplace_back(Instruction::MATH_MULTIPLY);
-            bytecode.emplace_back(2);
-        }
-        else if(line[1] == "/=")
-        {
-            //Divide the last two things on the stack (the bracket and the variable)
-            bytecode.emplace_back(Instruction::MATH_DIVIDE);
-            bytecode.emplace_back(2);
-        }
-        else if(line[1] == "%=")
-        {
-            //Divide the last two things on the stack (the bracket and the variable)
-            bytecode.emplace_back(Instruction::MATH_MOD);
-            bytecode.emplace_back(2);
-        }
-        else if(line[1] == "+=")
-        {
-            //Divide the last two things on the stack (the bracket and the variable)
-            bytecode.emplace_back(Instruction::MATH_ADD);
-            bytecode.emplace_back(2);
-        }
-        else if(line[1] == "-=")
-        {
-            //Divide the last two things on the stack (the bracket and the variable)
-            bytecode.emplace_back(Instruction::MATH_SUBTRACT);
-            bytecode.emplace_back(2);
+            //Do different things depending on the assignment operator
+            if(line[1] == "*=")
+            {
+                //Multiple the last two things on the stack (the bracket and the variable)
+                bytecode.emplace_back(Instruction::MATH_MULTIPLY);
+                bytecode.emplace_back(2);
+            }
+            else if(line[1] == "/=")
+            {
+                //Divide the last two things on the stack (the bracket and the variable)
+                bytecode.emplace_back(Instruction::MATH_DIVIDE);
+                bytecode.emplace_back(2);
+            }
+            else if(line[1] == "%=")
+            {
+                //Divide the last two things on the stack (the bracket and the variable)
+                bytecode.emplace_back(Instruction::MATH_MOD);
+                bytecode.emplace_back(2);
+            }
+            else if(line[1] == "+=")
+            {
+                //Divide the last two things on the stack (the bracket and the variable)
+                bytecode.emplace_back(Instruction::MATH_ADD);
+                bytecode.emplace_back(2);
+            }
+            else if(line[1] == "-=")
+            {
+                //Divide the last two things on the stack (the bracket and the variable)
+                bytecode.emplace_back(Instruction::MATH_SUBTRACT);
+                bytecode.emplace_back(2);
+            }
         }
 
         //Set the variable to the last thing on the stack
