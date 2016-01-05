@@ -162,13 +162,17 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 //Called to clear this scope's variables
                 auto clearScopeVariables = [&]()
                 {
-                    //Remove variables created in the scope
-                    bytecode.emplace_back(Instruction::STACK_WALK);
-                    bytecode.emplace_back(current.stackSize);
+                    //Remove variables created in the scope IF there's any
+                    if(variableStack.size() != current.stackSize)
+                    {
+                        bytecode.emplace_back(Instruction::STACK_WALK);
+                        bytecode.emplace_back(current.stackSize);
 
-                    //Remove variables registered with the compiler during this scope
-                    unsigned int removeTotal = variableStack.size() - current.stackSize;
-                    variableStack.erase(variableStack.end()-removeTotal, variableStack.end());
+                        //Remove variables registered with the compiler during this scope too
+                        unsigned int removeTotal = variableStack.size() - current.stackSize;
+                        variableStack.erase(variableStack.end()-removeTotal, variableStack.end());
+                    }
+
                 };
 
                 //Set the scope end position
