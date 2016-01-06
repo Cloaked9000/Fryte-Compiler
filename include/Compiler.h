@@ -12,6 +12,7 @@
 #include "Parser.h"
 #include "BytecodeIO.h"
 #include "VMTypes.h"
+#include "InstructionGenerator.h"
 
 class Compiler
 {
@@ -22,8 +23,8 @@ class Compiler
     protected:
     private:
         Parser parser;
+        InstructionGenerator igen;
         std::vector<unsigned char> bytecode; //Keeps track of bytecode to write to file
-        std::vector<Variable> variableStack; //Keeps track of variable position on the stack to be
         std::vector<Scope> scopes; //Keeps track of open scopes
         std::vector<Scope> pastScopes; //Keep a log of past scopes
         std::vector<Scope> functionStack; //Keeps track of function depth
@@ -43,8 +44,6 @@ class Compiler
         void processFunction(const std::vector<std::string>& line);
 
         void processGoto(const std::vector<std::string> &line);
-
-        int isVariable(const std::string &identifier); //Returns the stack position of the variable if found, -1 otherwise
 
         void processLine(const std::vector<std::string> &line);
 

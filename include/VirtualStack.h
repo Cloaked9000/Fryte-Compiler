@@ -13,12 +13,15 @@ class VirtualStack
         VirtualStack();
         virtual ~VirtualStack();
 
-        void push(const Variable &var);
-        Variable pop();
-        unsigned int size();
-        unsigned int resize(unsigned int newSize);
+        unsigned int getStackSize();
+        const Variable &getVariable(unsigned int stackPos);
 
         int isVariable(const std::string &identifier);
+        void renameVariable(unsigned int stackPos, const std::string &identifier);
+
+        void resize(unsigned int newSize);
+        void push(const Variable &var);
+        Variable pop();
     protected:
     private:
         std::vector<Variable> stack;

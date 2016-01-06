@@ -32,12 +32,22 @@ int VirtualStack::isVariable(const std::string& identifier)
     return -1; //Not found
 }
 
-unsigned int VirtualStack::size()
+unsigned int VirtualStack::getStackSize()
 {
     return stack.size();
 }
 
-unsigned int VirtualStack::resize(unsigned int newSize)
+void VirtualStack::resize(unsigned int newSize)
 {
-    stack.erase(stack.begin() + (newSize - stack.size() + 1), stack.end());
+    stack.erase(stack.begin() + newSize, stack.end());
+}
+
+const Variable &VirtualStack::getVariable(unsigned int stackPos)
+{
+    return stack[stackPos];
+}
+
+void VirtualStack::renameVariable(unsigned int stackPos, const std::string &identifier)
+{
+    stack[stackPos].identifier = identifier;
 }

@@ -1,6 +1,7 @@
 #include "Compiler.h"
 
 Compiler::Compiler()
+: igen(&bytecode)
 {
     //ctor
 }
@@ -8,16 +9,6 @@ Compiler::Compiler()
 Compiler::~Compiler()
 {
     //dtor
-}
-
-int Compiler::isVariable(const std::string& identifier)
-{
-    for(unsigned int a = 0; a < variableStack.size(); a++)
-    {
-        if(variableStack[a].identifier == identifier)
-            return a; //Found, return stack position
-    }
-    return -1; //Not found
 }
 
 int Compiler::isFunction(const std::string& identifier)
@@ -33,8 +24,7 @@ int Compiler::isFunction(const std::string& identifier)
 bool Compiler::compile(std::vector<std::string> &data)
 {
     //Reserve space for the entry point goto
-    bytecode.emplace_back(Instruction::GOTO);
-    bytecode.emplace_back(2); //Two by default, so even if no entry point is defined it wont go into a loop
+    igen.genGoto(2); //Two by default, so even if no entry point is defined it wont go into a loop
 
     //Compile the data
     std::vector<std::vector<std::string>> parsedFile;
@@ -82,7 +72,7 @@ void Compiler::processLine(const std::vector<std::string>& line)
         processIF(line);
     else if((line[0] == "{" || line[0] == "}"))
         processScope(line);
-    else if(isVariable(line.front()) != -1)
+    else if(igen.isVariable(line.front()) != -1)
         processVariable(line);
     else if(line[0] == "goto" || line[0][line[0].size()-1] == ':')
         processGoto(line);
@@ -107,8 +97,7 @@ void Compiler::processGoto(const std::vector<std::string> &line)
         {
             if(iter->first == line[1]) //Goto identifier matches this one
             {
-                bytecode.emplace_back(Instruction::GOTO);
-                bytecode.emplace_back(iter->second);
+                igen.genGoto(iter->second);
                 gotoFound = true;
             }
         }
@@ -128,7 +117,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
     //map<key><startDepth, beginPos>
     if(line[0] == "{") //Scope open
     {
-        Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, variableStack.size(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.type));
+        Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, igen.getStackSize(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.type));
         if(expectedScopeType.type == Scope::ELSE)
         {
             Scope &previousScope = pastScopes.back(); // Get preceding scope
@@ -163,14 +152,10 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 auto clearScopeVariables = [&]()
                 {
                     //Remove variables created in the scope IF there's any
-                    if(variableStack.size() != current.stackSize)
+                    if(igen.getStackSize() != current.stackSize)
                     {
-                        bytecode.emplace_back(Instruction::STACK_WALK);
-                        bytecode.emplace_back(current.stackSize);
-
-                        //Remove variables registered with the compiler during this scope too
-                        unsigned int removeTotal = variableStack.size() - current.stackSize;
-                        variableStack.erase(variableStack.end()-removeTotal, variableStack.end());
+                        igen.genStackWalk(current.stackSize);
+                        igen.resize(current.stackSize);
                     }
 
                 };
@@ -191,8 +176,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     clearScopeVariables();
 
                     //Add the instructions to loop back around to the beginning of the for
-                    bytecode.emplace_back(Instruction::GOTO);
-                    bytecode.emplace_back(current.statementPos);
+                    igen.genGoto(current.statementPos);
                     bytecode[current.startPos-1] = bytecode.size()-1;
                 }
                 else if(current.type == Scope::FOR) //If a FOR scope is ending
@@ -206,8 +190,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
                     //Add the instructions to loop back around to the beginning of the for
                     processVariable(initialisationArguments[0]);
-                    bytecode.emplace_back(Instruction::GOTO);
-                    bytecode.emplace_back(current.statementPos);
+                    igen.genGoto(current.statementPos);
                     bytecode[current.startPos-1] = bytecode.size()-1;
                 }
                 else if(current.type == Scope::ELSE)
@@ -226,12 +209,11 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     functionStack.pop_back();
 
                     //Bring exit point to top
-                    bytecode.emplace_back(Instruction::CLONE_TOP);
-                    bytecode.emplace_back(endingScope.stackSize);
+                    igen.genCloneTop(endingScope.stackSize);
 
                     //Insert the dynamic goto IF it's not the program entry point
                     if(endingScope.identifier != "entry")
-                        bytecode.emplace_back(Instruction::DYNAMIC_GOTO);
+                        igen.genDynamicGoto();
                 }
                 else
                 {
@@ -273,8 +255,7 @@ void Compiler::processFor(const std::vector<std::string>& line)
     evaluateBracket("(" + arguments[1] + ")");
 
     //Add the conditional IF instructions
-    bytecode.emplace_back(Instruction::CONDITIONAL_IF);
-    bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
+    igen.genConditionalIf(0); //Skip pos will be set later once the scope end point is known
 
     //Set the expected scope data
     expectedScopeType.incrementor = "(" + arguments[2] + ")";
@@ -290,8 +271,7 @@ void Compiler::processWhile(const std::vector<std::string>& line)
 {
     expectedScopeType.statementPos = bytecode.size();
     evaluateBracket(line[1]);
-    bytecode.emplace_back(Instruction::CONDITIONAL_IF);
-    bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
+    igen.genConditionalIf(0); //Skip pos will be set later once the scope end point is known
     expectedScopeType.type = Scope::WHILE;
 }
 
@@ -299,8 +279,7 @@ void Compiler::processIF(const std::vector<std::string>& line)
 {
     expectedScopeType.statementPos = bytecode.size();
     evaluateBracket(line[1]);
-    bytecode.emplace_back(Instruction::CONDITIONAL_IF);
-    bytecode.emplace_back(0); //0 for now, we're just reserving space for it as the position will be set once the bytecode is compiled & length is known
+    igen.genConditionalIf(0); //Skip pos will be set later once the scope end point is known
     expectedScopeType.type = Scope::IF;
 }
 
@@ -349,28 +328,17 @@ void Compiler::processFunction(const std::vector<std::string>& line)
         }
 
         //Add in the goto to set the bytecode position to the beginning of the function
-        unsigned int stackSizeBeforeFunction = variableStack.size();
+        unsigned int stackSizeBeforeFunction = igen.getStackSize();
 
         //Create the exit point
-        variableStack.emplace_back(Variable("functionEnd", DataType::INT));
-        bytecode.emplace_back(Instruction::CREATE_INT);
-        bytecode.emplace_back(bytecode.size()+3); //Add a bit for the stack walk below
+        igen.genCreateInt("functionEnd", bytecode.size()+4); //Add a bit for the stack walk below
 
         //Goto the function
-        bytecode.emplace_back(Instruction::GOTO);
-        bytecode.emplace_back(scope->startPos);
-
+        igen.genGoto(scope->startPos);
 
         //Insert cleaning code
-        unsigned int removeTotal = (variableStack.size() - scope->stackSize) + stackSizeBeforeFunction;
-        for(int a = variableStack.size()-removeTotal; a < removeTotal; a++)
-        {
-            std::cout << "\nRemoving: " << variableStack.back().identifier;
-            variableStack.pop_back();
-        }
-       // variableStack.erase(variableStack.end()-removeTotal, variableStack.end());
-        bytecode.emplace_back(Instruction::STACK_WALK);
-        bytecode.emplace_back(pastScopes.back().stackSize);
+        igen.genStackWalk(pastScopes.back().stackSize);
+        igen.resize(pastScopes.back().stackSize);
     }
 }
 
@@ -386,9 +354,8 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
         }
         else //Else if it's a math operation
         {
-            //First move the variable that we're multiplying by to the top of the stack for the operation
-            bytecode.emplace_back(Instruction::CLONE_TOP);
-            bytecode.emplace_back(isVariable(line[0]));
+            //First move the variable data that we're operating on to the top of the stack
+            igen.genCloneTop(line[0]);
 
             //Evaluate the bracket containing what the variable should be set to
             evaluateBracket("(" + line[2] + ")");
@@ -396,39 +363,29 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
             //Do different things depending on the assignment operator
             if(line[1] == "*=")
             {
-                //Multiple the last two things on the stack (the bracket and the variable)
-                bytecode.emplace_back(Instruction::MATH_MULTIPLY);
-                bytecode.emplace_back(2);
+                igen.genMathMultiply(2);
             }
             else if(line[1] == "/=")
             {
-                //Divide the last two things on the stack (the bracket and the variable)
-                bytecode.emplace_back(Instruction::MATH_DIVIDE);
-                bytecode.emplace_back(2);
+                igen.genMathDivide(2);
             }
             else if(line[1] == "%=")
             {
                 //Divide the last two things on the stack (the bracket and the variable)
-                bytecode.emplace_back(Instruction::MATH_MOD);
-                bytecode.emplace_back(2);
+                igen.genMathModulus(2);
             }
             else if(line[1] == "+=")
             {
-                //Divide the last two things on the stack (the bracket and the variable)
-                bytecode.emplace_back(Instruction::MATH_ADD);
-                bytecode.emplace_back(2);
+                igen.genMathAdd(2);
             }
             else if(line[1] == "-=")
             {
-                //Divide the last two things on the stack (the bracket and the variable)
-                bytecode.emplace_back(Instruction::MATH_SUBTRACT);
-                bytecode.emplace_back(2);
+                igen.genMathSubtract(2);
             }
         }
 
         //Set the variable to the last thing on the stack
-        bytecode.emplace_back(Instruction::SET_VARIABLE);
-        bytecode.emplace_back(isVariable(line[0]));
+        igen.genSetVariable(line[0]);
     }
     else //If we're creating a new variable (eg int a = 20)
     {
@@ -438,38 +395,32 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
         {
             //Convert initial value to bytecode
             evaluateBracket("(" + line[3] + ")");
+            igen.renameVariable(igen.getStackSize()-1, line[1]);
         }
         else //Else no default value provided (int a)
         {
             //Give a default value based on its type
             if(line[0] == "string")
             {
-                bytecode.emplace_back(Instruction::CREATE_STRING);
-                bytecode.emplace_back(0);
+                igen.genCreateString(line[1]);
             }
             else if(line[0] == "int")
             {
-                bytecode.emplace_back(Instruction::CREATE_INT);
-                bytecode.emplace_back(0);
+                igen.genCreateInt(line[1]);
             }
             else if(line[0] == "char")
             {
-                bytecode.emplace_back(Instruction::CREATE_CHAR);
-                bytecode.emplace_back(' ');
+                igen.genCreateChar(line[1]);
             }
             else if(line[0] == "bool")
             {
-                bytecode.emplace_back(Instruction::CREATE_BOOL);
-                bytecode.emplace_back(0);
+                igen.genCreateBool(line[1]);
             }
             else if(line[0] == "auto")
             {
                 throw std::string("Can't deduct type for auto as no initial value is provided");
             }
         }
-
-        //Add the variable create instruction
-        variableStack.emplace_back(Variable(line[1], type));
     }
     return;
 }
@@ -480,23 +431,17 @@ void Compiler::processConsole(const std::vector<std::string>& line)
     std::string data = line[2];
     if(operation == "print")
     {
-        unsigned int stackSizeOld = variablesOnStack;
+        //Store old stack size for calculating how many things have been added to the stack during bracket evaluation
+        auto stackSizeOld = igen.getStackSize();
         evaluateBracket(data);
-        for(unsigned int a = stackSizeOld; a < variablesOnStack; a++)
-            bytecode.emplace_back(Instruction::CONSOLE_OUT);
+        igen.genConsoleOut(igen.getStackSize() - stackSizeOld);
+
     }
     else if(operation == "scan")
     {
         std::vector<std::string> bracket;
         parser.extractBracket(data, bracket);
-        int varPos = isVariable(bracket[0]);
-        if(varPos == -1) //Error, variable not found
-            throw std::string("Cannot scan into variable " + data + ", variable undeclared");
-        else
-        {
-            bytecode.emplace_back(Instruction::CONSOLE_IN);
-            bytecode.emplace_back(varPos);
-        }
+        igen.genConsoleIn(bracket[0]);
     }
     else
     {
@@ -510,40 +455,31 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     variablesOnStack = 0;
     auto addVariableToStack = [&] (const std::string &data) -> void
     {
-        int possibleVariable = isVariable(data);
-        if(possibleVariable != -1) //If it's a variable
+        if(igen.isVariable(data) != -1) //If it's a variable
         {
-            bytecode.emplace_back(Instruction::CLONE_TOP);
-            bytecode.emplace_back(possibleVariable);
+            igen.genCloneTop(data);
         }
         else //Else if it's raw data
         {
             if(data[0] == '"') //If string
             {
-                bytecode.emplace_back(Instruction::CREATE_STRING);
-                bytecode.emplace_back(data.size()-2); //-2 to remove the ""
-                for(unsigned int a = 1; a < data.size()-1; a++)
-                    bytecode.emplace_back(data[a]);
+                igen.genCreateString("", data.substr(1, data.size()-2));
             }
             else if(data[0] == '\'') //If character
             {
-                bytecode.emplace_back(Instruction::CREATE_CHAR);
-                bytecode.emplace_back(data[1]);
+                igen.genCreateChar("", data[1]);
             }
             else if(data == "true") //If boolean
             {
-                bytecode.emplace_back(Instruction::CREATE_BOOL);
-                bytecode.emplace_back(1);
+                igen.genCreateBool("", true);
             }
             else if(data == "false") //If boolean
             {
-                bytecode.emplace_back(Instruction::CREATE_BOOL);
-                bytecode.emplace_back(0);
+                igen.genCreateBool("", false);
             }
             else //Else if number
             {
-                bytecode.emplace_back(Instruction::CREATE_INT);
-                bytecode.emplace_back(stoi(data));
+                igen.genCreateInt("", stoi(data));
             }
         }
     };
@@ -561,15 +497,14 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
         //If it's an instruction
         if(segmentInstruction != Instruction::NONE)
         {
-            bytecode.emplace_back(segmentInstruction);
             if(segments.size() == 1)
             {
-                bytecode.emplace_back(variablesOnStack);
+                igen.genOperator(segmentInstruction, variablesOnStack);
                 variablesOnStack = 0;
             }
             else
             {
-                bytecode.emplace_back(segments.size()-1);
+                igen.genOperator(segmentInstruction, segments.size() - 1);
             }
             variablesOnStack++;
         }
