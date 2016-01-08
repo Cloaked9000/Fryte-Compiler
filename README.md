@@ -20,6 +20,8 @@ Gotos <- Have fun
 
 Declaring/initialising/setting/using variables.
 
+Functions (But no arguments or return values yet!)
+
 
 # Sample program
 
