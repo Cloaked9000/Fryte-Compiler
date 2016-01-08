@@ -27,7 +27,7 @@ int VirtualStack::isVariable(const std::string& identifier)
     for(unsigned int a = 0; a < stack.size(); a++)
     {
         if(stack[a].identifier == identifier)
-            return a; //Found, return stack position
+            return getStackSize() - a - 1; //Found, return stack position
     }
     return -1; //Not found
 }

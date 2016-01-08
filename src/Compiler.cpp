@@ -154,8 +154,8 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     //Remove variables created in the scope IF there's any
                     if(igen.getStackSize() != current.stackSize)
                     {
-                        igen.genStackWalk(current.stackSize);
-                        igen.resize(current.stackSize);
+                        igen.genStackWalk(igen.getStackSize() - current.stackSize);
+                        igen.resize(igen.getStackSize() - current.stackSize - 1);
                     }
 
                 };
@@ -207,6 +207,14 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     //Get scope to return to from function stack
                     Scope endingScope = functionStack.back();
                     functionStack.pop_back();
+
+                    //Erase variables created except the exit point
+                    unsigned int variablesToRemove = igen.getStackSize() - endingScope.stackSize;
+                    if(variablesToRemove > 0)
+                    {
+                        igen.genStackWalk(variablesToRemove);
+                        igen.resize(igen.getStackSize() - 1);
+                    }
 
                     //Bring exit point to top
                     igen.genCloneTop(endingScope.stackSize);
@@ -327,18 +335,11 @@ void Compiler::processFunction(const std::vector<std::string>& line)
             scope = &(*scopeIter); //Set found scope pointer to the correct past scope
         }
 
-        //Add in the goto to set the bytecode position to the beginning of the function
-        unsigned int stackSizeBeforeFunction = igen.getStackSize();
-
         //Create the exit point
         igen.genCreateInt("functionEnd", bytecode.size()+4); //Add a bit for the stack walk below
 
         //Goto the function
         igen.genGoto(scope->startPos);
-
-        //Insert cleaning code
-        igen.genStackWalk(pastScopes.back().stackSize);
-        igen.resize(pastScopes.back().stackSize);
     }
 }
 
