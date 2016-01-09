@@ -114,7 +114,6 @@ void Compiler::processGoto(const std::vector<std::string> &line)
 
 void Compiler::processScope(const std::vector<std::string> &line)
 {
-    //map<key><startDepth, beginPos>
     if(line[0] == "{") //Scope open
     {
         Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, igen.getStackSize(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.bytecodeSizeBefore, expectedScopeType.type));
@@ -128,6 +127,21 @@ void Compiler::processScope(const std::vector<std::string> &line)
         else if(expectedScopeType.type == Scope::FUNCTION)
         {
             functionStack.emplace_back(newScope);
+
+            //Setup function arguments by adding them to the stack
+            std::string &arguments = expectedScopeType.incrementor;
+            std::vector<std::string> args = parser.extractBracketArguments(arguments);
+            std::vector<std::vector<std::string>> processedArgs;
+            parser.tokenizeFile(args, processedArgs);
+            unsigned int counter = 0;
+            for(const auto &a : processedArgs) //Loop through each variable that needs to be created
+            {
+                processVariable(a); //Initialise the argument
+                igen.genCloneTop(counter + 2); //Clone the value to set it to
+                igen.genSetVariable(1); //Set the argument value
+                counter += 2;
+            }
+
         }
 
         scopes.emplace_back(newScope);
@@ -362,6 +376,9 @@ void Compiler::processFunction(const std::vector<std::string>& line)
             scope = &(*scopeIter); //Set found scope pointer to the correct past scope
         }
 
+        //Process arguments
+        evaluateBracket(line[1]);
+
         //Create the exit point
         igen.genCreateInt("functionEnd", bytecode.size()+4); //Add a bit for the stack walk below
 
@@ -434,6 +451,7 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
             }
             else if(line[0] == "int")
             {
+                std::cout << "\nPushing variable int";
                 igen.genCreateInt(line[1]);
             }
             else if(line[0] == "char")

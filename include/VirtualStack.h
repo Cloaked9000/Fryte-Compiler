@@ -14,7 +14,7 @@ class VirtualStack
         virtual ~VirtualStack();
 
         unsigned int getStackSize();
-        const Variable &getVariable(unsigned int stackPos);
+        Variable getVariable(unsigned int stackPos);
 
         int isVariable(const std::string &identifier);
         void renameVariable(unsigned int stackPos, const std::string &identifier);

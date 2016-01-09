@@ -20,10 +20,26 @@ Gotos <- Have fun
 
 Declaring/initialising/setting/using variables.
 
-Functions (But no arguments or return values yet!)
+Functions with arguments (But no return values yet!)
 
 
 # Sample program
+
+```
+int sayHello(string name)
+{
+    Console.print("Hello, ", name, "!")
+}
+int entry()
+{
+    string name
+    Console.print("What is your name?\n")
+    Console.scan(name)
+    sayHello(name)
+}
+```
+
+# Another sample program
 
 ```
 string key = "password1"
@@ -46,7 +62,7 @@ while((entered != key) & (attemptsRemaining > 0))
 }
 ```
 
-# Another sample program
+# Yet another sample program
 
 ```
 for(int a = 0, (a < 10) & (1 == 2), a += 1)

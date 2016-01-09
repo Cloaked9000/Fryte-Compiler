@@ -30,6 +30,7 @@ class InstructionGenerator : public VirtualStack
         void genCompareEqual(unsigned int argCount);
         void genConditionalIf(unsigned int skipToPos = 0);
         void genSetVariable(const std::string &varName);
+        void genSetVariable(int offset);
         void genCompareUnequal(unsigned int argCount);
         void genCompareLessThan();
         void genCompareMoreThan();

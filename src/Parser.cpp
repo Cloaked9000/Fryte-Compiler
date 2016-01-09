@@ -269,7 +269,8 @@ std::vector<std::string> Parser::extractBracketArguments(std::string data)
             argumentBuffer += data[c];
         }
     }
-    arguments.emplace_back(argumentBuffer);
+    if(!argumentBuffer.empty())
+        arguments.emplace_back(argumentBuffer);
 
     //Fix the spacing
     for(auto &arg : arguments)

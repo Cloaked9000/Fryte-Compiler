@@ -150,8 +150,13 @@ void InstructionGenerator::genConditionalIf(unsigned int skipToPos)
 
 void InstructionGenerator::genSetVariable(const std::string &varName)
 {
+    genSetVariable(isVariable(varName));
+}
+
+void InstructionGenerator::genSetVariable(int offset)
+{
     bytecode->emplace_back(Instruction::SET_VARIABLE);
-    bytecode->emplace_back(isVariable(varName));
+    bytecode->emplace_back(offset);
     pop();
 }
 

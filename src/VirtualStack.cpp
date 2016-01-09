@@ -42,8 +42,10 @@ void VirtualStack::resize(unsigned int newSize)
     stack.erase(stack.begin() + newSize, stack.end());
 }
 
-const Variable &VirtualStack::getVariable(unsigned int stackPos)
+Variable VirtualStack::getVariable(unsigned int stackPos)
 {
+    if(stackPos >= stack.size())
+        return Variable("", DataType::INT);
     return stack[stackPos];
 }
 
