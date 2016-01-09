@@ -109,8 +109,11 @@ struct Scope
     {
         IF, WHILE, ELSE, FOR, FUNCTION,
     };
-    Scope()=default;
-    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, std::string sincrem, std::string sidentifier, ScopeType &t)
+    Scope()
+    {
+        wasOptimisedOut = false;
+    }
+    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, std::string sincrem, std::string sidentifier, unsigned int sizeBefore, ScopeType &t)
     {
         statementPos = statPos;
         startPos = spos;
@@ -120,6 +123,7 @@ struct Scope
         endPos = 0;
         incrementor = sincrem;
         identifier = sidentifier;
+        bytecodeSizeBefore = sizeBefore;
     }
     ScopeType type;
     unsigned int startPos;
@@ -127,7 +131,9 @@ struct Scope
     unsigned int statementPos;
     unsigned int stackSize;
     unsigned int endPos;
+    unsigned int bytecodeSizeBefore;
     std::string incrementor;
     std::string identifier;
+    bool wasOptimisedOut;
 };
 #endif // VMTYPES_H

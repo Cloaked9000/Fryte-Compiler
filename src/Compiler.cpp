@@ -29,7 +29,7 @@ bool Compiler::compile(std::vector<std::string> &data)
     //Compile the data
     std::vector<std::vector<std::string>> parsedFile;
     parser.tokenizeFile(data, parsedFile);
-    for(unsigned int line = 0; line < parsedFile.size(); line++)
+    for(line = 0; line < parsedFile.size(); line++)
     {
         try
         {
@@ -117,12 +117,12 @@ void Compiler::processScope(const std::vector<std::string> &line)
     //map<key><startDepth, beginPos>
     if(line[0] == "{") //Scope open
     {
-        Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, igen.getStackSize(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.type));
+        Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, igen.getStackSize(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.bytecodeSizeBefore, expectedScopeType.type));
         if(expectedScopeType.type == Scope::ELSE)
         {
             Scope &previousScope = pastScopes.back(); // Get preceding scope
             bytecode.insert(bytecode.begin() + previousScope.endPos++, Instruction::GOTO);
-            bytecode.insert(bytecode.begin() + previousScope.endPos++, 0); //0 for now, this will be filled in later
+            bytecode.insert(bytecode.begin() + previousScope.endPos++, bytecode.size()+1); //Temporary value, this will be filled in later.
             bytecode[previousScope.startPos-1] += 2;
         }
         else if(expectedScopeType.type == Scope::FUNCTION)
@@ -148,6 +148,16 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
             if(current.scopeDepth == scopeDepth) //We've found the scope that's ending
             {
+                if(current.startPos == bytecode.size() && current.type != Scope::FUNCTION) //If the scope was empty, optimise it out
+                {
+                    bytecode.erase(bytecode.begin() + current.bytecodeSizeBefore, bytecode.end());
+                    current.wasOptimisedOut = true;
+                    current.endPos = bytecode.size();
+                    pastScopes.emplace_back(current);
+                    displayWarning("Empty scope. It has been optimised out, but removal is recommended.");
+                    return;
+                }
+
                 //Called to clear this scope's variables
                 auto clearScopeVariables = [&]()
                 {
@@ -155,7 +165,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     if(igen.getStackSize() != current.stackSize)
                     {
                         igen.genStackWalk(igen.getStackSize() - current.stackSize);
-                        igen.resize(igen.getStackSize() - current.stackSize - 1);
+                        igen.resize(current.stackSize);
                     }
 
                 };
@@ -198,7 +208,8 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     clearScopeVariables();
 
                     Scope &previousScope = pastScopes.back(); // Get preceding scope
-                    bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous if's goto to this point after the else
+                    if(!previousScope.wasOptimisedOut)
+                        bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous if's goto to this point after the else IF the if wasn't optimised out
                 }
                 else if(current.type == Scope::FUNCTION)
                 {
@@ -210,18 +221,19 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
                     //Erase variables created except the exit point
                     unsigned int variablesToRemove = igen.getStackSize() - endingScope.stackSize;
-                    if(variablesToRemove > 0)
+                    if(variablesToRemove > 0 && endingScope.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
                     {
                         igen.genStackWalk(variablesToRemove);
-                        igen.resize(igen.getStackSize() - 1);
+                        igen.resize(endingScope.stackSize);
                     }
-
-                    //Bring exit point to top
-                    igen.genCloneTop(endingScope.stackSize);
 
                     //Insert the dynamic goto IF it's not the program entry point
                     if(endingScope.identifier != "entry")
+                    {
+                        //Bring exit point to top and write the goto
+                        igen.genCloneTop(endingScope.stackSize);
                         igen.genDynamicGoto();
+                    }
                 }
                 else
                 {
@@ -252,6 +264,9 @@ void Compiler::processFor(const std::vector<std::string>& line)
     std::vector<std::string> arguments = parser.extractBracketArguments(line[1]);
     std::vector<std::vector<std::string>> initialisationArguments;
 
+    //Store the bytecode size before the statement
+    expectedScopeType.bytecodeSizeBefore = bytecode.size();
+
     //The for loop initialisation data must be parsed first and then passed to processVariable
     parser.tokenizeFile({arguments[0]}, initialisationArguments);
     processVariable(initialisationArguments[0]);
@@ -272,11 +287,19 @@ void Compiler::processFor(const std::vector<std::string>& line)
 
 void Compiler::processElse(const std::vector<std::string>& line)
 {
+    //Store the bytecode size before the statement
+    expectedScopeType.bytecodeSizeBefore = bytecode.size();
+
+    //Store type
     expectedScopeType.type = Scope::ELSE;
 }
 
 void Compiler::processWhile(const std::vector<std::string>& line)
 {
+    //Store the bytecode size before the statement
+    expectedScopeType.bytecodeSizeBefore = bytecode.size();
+
+    //Store the other stuff
     expectedScopeType.statementPos = bytecode.size();
     evaluateBracket(line[1]);
     igen.genConditionalIf(0); //Skip pos will be set later once the scope end point is known
@@ -285,6 +308,10 @@ void Compiler::processWhile(const std::vector<std::string>& line)
 
 void Compiler::processIF(const std::vector<std::string>& line)
 {
+    //Store the bytecode size before the statement
+    expectedScopeType.bytecodeSizeBefore = bytecode.size();
+
+    //And the other stuff
     expectedScopeType.statementPos = bytecode.size();
     evaluateBracket(line[1]);
     igen.genConditionalIf(0); //Skip pos will be set later once the scope end point is known
@@ -568,6 +595,10 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     return 0;
 }
 
+void Compiler::displayWarning(const std::string& message)
+{
+    std::cout << "\nWarning on line " << line << ": " << message << std::endl;
+}
 
 
 

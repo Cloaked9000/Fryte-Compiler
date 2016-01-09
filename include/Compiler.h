@@ -33,6 +33,8 @@ class Compiler
         int scopeDepth = 0; //Keeps track of current scope depth
         Scope expectedScopeType; //Keeps track of scopes
 
+        unsigned int line; //Current line being compiled
+
         unsigned int variablesOnStack = 0;
 
         void validateArgumentCount(unsigned int expected, unsigned int got);
@@ -60,6 +62,8 @@ class Compiler
         void processFor(const std::vector<std::string> &line); //Process a for loop
 
         unsigned int evaluateBracket(std::string line); //Converts bracket information into stack instructions. Returns the number of things added to the stack.
+
+        void displayWarning(const std::string &message);
 };
 
 #endif // COMPILER_H
