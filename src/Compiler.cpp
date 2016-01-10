@@ -182,9 +182,6 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     }
                 };
 
-                //Set the scope end position
-                current.endPos = bytecode.size();
-
                 //Handle the scope end differently depending on its type
                 if(current.type == Scope::IF) //If an IF scope is ending
                 {
@@ -252,6 +249,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 }
 
                 //Store the scope in pastScopes and erase it from currentScopes as it's no longer open
+                current.endPos = bytecode.size();
                 pastScopes.emplace_back(*iter);
                 iter = scopes.erase(iter);
                 break;

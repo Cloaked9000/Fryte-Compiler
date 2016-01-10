@@ -22,7 +22,7 @@ Variable VirtualStack::pop()
 {
     if(stackOffset == 0)
         throw std::string("Can't pop from virtual stack, stack empty");
-    return stack[stackOffset--];
+    return stack[--stackOffset];
 }
 
 int VirtualStack::isVariable(const std::string& identifier)
