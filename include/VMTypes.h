@@ -48,6 +48,7 @@ enum class DataType
 
 struct Variable
 {
+    Variable()=default;
     Variable(const std::string &name, DataType varType)
     {
         identifier = name;

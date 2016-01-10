@@ -3,6 +3,7 @@
 VirtualStack::VirtualStack()
 {
     //ctor
+    stackOffset = 0;
 }
 
 VirtualStack::~VirtualStack()
@@ -12,19 +13,21 @@ VirtualStack::~VirtualStack()
 
 void VirtualStack::push(const Variable& var)
 {
-    stack.emplace_back(var);
+    if(stackOffset == maxStackSize)
+        throw std::string("Can't push to virtual stack, stack full");
+    stack[stackOffset++] = var;
 }
 
 Variable VirtualStack::pop()
 {
-    Variable rv = stack.back();
-    stack.pop_back();
-    return rv;
+    if(stackOffset == 0)
+        throw std::string("Can't pop from virtual stack, stack empty");
+    return stack[stackOffset--];
 }
 
 int VirtualStack::isVariable(const std::string& identifier)
 {
-    for(unsigned int a = 0; a < stack.size(); a++)
+    for(unsigned int a = 0; a <= stackOffset; a++)
     {
         if(stack[a].identifier == identifier)
             return getStackSize() - a - 1; //Found, return stack position
@@ -34,17 +37,17 @@ int VirtualStack::isVariable(const std::string& identifier)
 
 unsigned int VirtualStack::getStackSize()
 {
-    return stack.size();
+    return stackOffset;
 }
 
 void VirtualStack::resize(unsigned int newSize)
 {
-    stack.erase(stack.begin() + newSize, stack.end());
+    stackOffset -= newSize;
 }
 
 Variable VirtualStack::getVariable(unsigned int stackPos)
 {
-    if(stackPos >= stack.size())
+    if(stackPos >= stackOffset)
         return Variable("", DataType::INT);
     return stack[stackPos];
 }

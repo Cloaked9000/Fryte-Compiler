@@ -24,7 +24,9 @@ class VirtualStack
         Variable pop();
     protected:
     private:
-        std::vector<Variable> stack;
+        const static int maxStackSize = 500;
+        Variable stack[maxStackSize];
+        unsigned int stackOffset;
 };
 
 #endif // VIRTUALSTACK_H

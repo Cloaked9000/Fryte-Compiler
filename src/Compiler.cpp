@@ -179,9 +179,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     if(igen.getStackSize() != current.stackSize)
                     {
                         igen.genStackWalk(igen.getStackSize() - current.stackSize);
-                        igen.resize(current.stackSize);
                     }
-
                 };
 
                 //Set the scope end position
@@ -223,7 +221,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
                     Scope &previousScope = pastScopes.back(); // Get preceding scope
                     if(!previousScope.wasOptimisedOut)
-                        bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous if's goto to this point after the else IF the if wasn't optimised out
+                        bytecode[previousScope.endPos-1] = bytecode.size(); //Set the previous if's goto to this point after the else
                 }
                 else if(current.type == Scope::FUNCTION)
                 {
@@ -238,7 +236,6 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     if(variablesToRemove > 0 && endingScope.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
                     {
                         igen.genStackWalk(variablesToRemove);
-                        igen.resize(endingScope.stackSize);
                     }
 
                     //Insert the dynamic goto IF it's not the program entry point

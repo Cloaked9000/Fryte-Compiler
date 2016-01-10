@@ -218,6 +218,7 @@ void InstructionGenerator::genStackWalk(unsigned int pos)
 {
     bytecode->emplace_back(Instruction::STACK_WALK);
     bytecode->emplace_back(pos);
+    resize(pos);
 }
 
 void InstructionGenerator::genDynamicGoto()
