@@ -112,7 +112,14 @@ struct Scope
     };
     Scope()
     {
+        argumentCount = 0;
+        endPos = 0;
         wasOptimisedOut = false;
+        startPos = 0;
+        scopeDepth = 0;
+        statementPos = 0;
+        stackSize = 0;
+        bytecodeSizeBefore = 0;
     }
     Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, std::string sincrem, std::string sidentifier, unsigned int sizeBefore, ScopeType &t)
     {
@@ -121,10 +128,13 @@ struct Scope
         scopeDepth = sdep;
         stackSize = ssize;
         type = t;
-        endPos = 0;
         incrementor = sincrem;
         identifier = sidentifier;
         bytecodeSizeBefore = sizeBefore;
+    }
+    void reset() //Resets the struct to default values. MUST be called before a new expected scope is set up if the variable has previously been used
+    {
+        *this = Scope();
     }
     ScopeType type;
     unsigned int startPos;
@@ -136,5 +146,6 @@ struct Scope
     std::string incrementor;
     std::string identifier;
     bool wasOptimisedOut;
+    unsigned int argumentCount;
 };
 #endif // VMTYPES_H

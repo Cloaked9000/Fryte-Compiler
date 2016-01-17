@@ -27,7 +27,7 @@ Variable VirtualStack::pop()
 
 int VirtualStack::isVariable(const std::string& identifier)
 {
-    for(unsigned int a = 0; a <= stackOffset; a++)
+    for(unsigned int a = 0; a < stackOffset; a++)
     {
         if(stack[a].identifier == identifier)
             return getStackSize() - a - 1; //Found, return stack position

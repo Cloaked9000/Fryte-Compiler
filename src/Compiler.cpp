@@ -126,22 +126,14 @@ void Compiler::processScope(const std::vector<std::string> &line)
         }
         else if(expectedScopeType.type == Scope::FUNCTION)
         {
-            functionStack.emplace_back(newScope);
-
-            //Setup function arguments by adding them to the stack
-            std::string &arguments = expectedScopeType.incrementor;
-            std::vector<std::string> args = parser.extractBracketArguments(arguments);
-            std::vector<std::vector<std::string>> processedArgs;
-            parser.tokenizeFile(args, processedArgs);
-            unsigned int counter = 0;
-            for(const auto &a : processedArgs) //Loop through each variable that needs to be created
+            std::vector<std::vector<std::string>> argumentNames;
+            parser.tokenizeFile(parser.extractBracketArguments(newScope.incrementor), argumentNames);
+            for(auto iter = argumentNames.rbegin(); iter != argumentNames.rend(); iter++)
             {
-                processVariable(a); //Initialise the argument
-                igen.genCloneTop(counter + 2); //Clone the value to set it to
-                igen.genSetVariable(1); //Set the argument value
-                counter += 2;
+                igen.push(Variable((*iter)[1], stringToDataType((*iter)[0])));
             }
-
+            newScope.argumentCount = argumentNames.size();
+            functionStack.emplace_back(newScope);
         }
 
         scopes.emplace_back(newScope);
@@ -172,6 +164,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     return;
                 }
 
+
                 //Called to clear this scope's variables
                 auto clearScopeVariables = [&]()
                 {
@@ -194,7 +187,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 {
                     clearScopeVariables();
 
-                    //Add the instructions to loop back around to the beginning of the for
+                    //Add the instructions to loop back around to the beginning of the while
                     igen.genGoto(current.statementPos);
                     bytecode[current.startPos-1] = bytecode.size()-1;
                 }
@@ -222,8 +215,6 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 }
                 else if(current.type == Scope::FUNCTION)
                 {
-                    // *variables are cleaned up by the caller, not at the end of the function!*
-
                     //Get scope to return to from function stack
                     Scope endingScope = functionStack.back();
                     functionStack.pop_back();
@@ -269,6 +260,9 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
 void Compiler::processFor(const std::vector<std::string>& line)
 {
+    //Reset the expected scope
+    expectedScopeType.reset();
+
     //Extract arguments
     std::vector<std::string> arguments = parser.extractBracketArguments(line[1]);
     std::vector<std::vector<std::string>> initialisationArguments;
@@ -296,6 +290,9 @@ void Compiler::processFor(const std::vector<std::string>& line)
 
 void Compiler::processElse(const std::vector<std::string>& line)
 {
+    //Reset the expected scope
+    expectedScopeType.reset();
+
     //Store the bytecode size before the statement
     expectedScopeType.bytecodeSizeBefore = bytecode.size();
 
@@ -305,6 +302,9 @@ void Compiler::processElse(const std::vector<std::string>& line)
 
 void Compiler::processWhile(const std::vector<std::string>& line)
 {
+    //Reset the expected scope
+    expectedScopeType.reset();
+
     //Store the bytecode size before the statement
     expectedScopeType.bytecodeSizeBefore = bytecode.size();
 
@@ -317,6 +317,9 @@ void Compiler::processWhile(const std::vector<std::string>& line)
 
 void Compiler::processIF(const std::vector<std::string>& line)
 {
+    //Reset the expected scope
+    expectedScopeType.reset();
+
     //Store the bytecode size before the statement
     expectedScopeType.bytecodeSizeBefore = bytecode.size();
 
@@ -340,11 +343,14 @@ void Compiler::processFunction(const std::vector<std::string>& line)
     DataType possibleType = stringToDataType(line[0]);
     if(possibleType != DataType::NIL && line.size() > 2 && line[2][0] == '(') //If we're defining a function
     {
+        //Reset the expected scope
+        expectedScopeType.reset();
+
         //Add the function
-        functions.emplace_back(Variable(line[1], possibleType));
-        expectedScopeType.type = Scope::FUNCTION;
-        expectedScopeType.identifier = line[1];
-        expectedScopeType.incrementor = line[2];
+        functions.emplace_back(Variable(line[1], possibleType)); //Register the function
+        expectedScopeType.type = Scope::FUNCTION; //Store the scope type
+        expectedScopeType.identifier = line[1]; //Store the function name
+        expectedScopeType.incrementor = line[2]; //Store the function arguments
 
         //If this is the program entry point, update the entry point goto position
         if(line[1] == "entry")
@@ -371,11 +377,21 @@ void Compiler::processFunction(const std::vector<std::string>& line)
             scope = &(*scopeIter); //Set found scope pointer to the correct past scope
         }
 
-        //Process arguments
-        evaluateBracket(line[1]);
-
         //Create the exit point
-        igen.genCreateInt("functionEnd", bytecode.size()+4); //Add a bit for the stack walk below
+        igen.genCreateInt("functionEnd", 0); //Add a bit for the stack walk below
+        unsigned int exitPointPos = bytecode.size()-1;
+
+        //Evaluate arguments, adding to the stack
+        unsigned int sizeBeforeEvaluation = igen.getStackSize();
+        evaluateBracket(line[1]);
+        unsigned int sizeAfterEvaluation = igen.getStackSize();
+
+        //Artificially remove them from the compiler's stack, as the values are already cleaned up by the function scope end
+        for(unsigned int a = sizeBeforeEvaluation; a < sizeAfterEvaluation; a++)
+            igen.pop();
+
+        //update the exit point position
+        bytecode[exitPointPos] = bytecode.size()+2;
 
         //Goto the function
         igen.genGoto(scope->startPos);
@@ -446,7 +462,6 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
             }
             else if(line[0] == "int")
             {
-                std::cout << "\nPushing variable int";
                 igen.genCreateInt(line[1]);
             }
             else if(line[0] == "char")
@@ -563,10 +578,14 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
     //Split the arguments
     std::vector<std::string> &&arguments = parser.extractBracketArguments(originalLine);
 
-    //Bracket all arguments
+    //Bracket all arguments, removing unneeded spaces
     for(auto &arg : arguments)
     {
+        while(arg[0] == ' ')
+            arg.erase(0, 1);
         arg.insert(0, "(");
+        while(arg[arg.size()-1] == ' ')
+            arg.erase(arg.size()-1, 1);
         arg += ")";
     }
 
