@@ -30,7 +30,7 @@ int VirtualStack::isVariable(const std::string& identifier)
     for(unsigned int a = 0; a < stackOffset; a++)
     {
         if(stack[a].identifier == identifier)
-            return getStackSize() - a - 1; //Found, return stack position
+            return getStackSize() - a - 1; //Found, return stack offset
     }
     return -1; //Not found
 }

@@ -39,11 +39,13 @@ class Compiler
 
         void validateArgumentCount(unsigned int expected, unsigned int got);
 
+        void processReturn(const std::vector<std::string>& line);
+
         int isFunction(const std::string& identifier);
 
         void processVariable(const std::vector<std::string>& line);
 
-        void processFunction(const std::vector<std::string>& line);
+        void processFunction(const std::vector<std::string>& line, bool destroyReturnValue = true);
 
         void processGoto(const std::vector<std::string> &line);
 

@@ -39,7 +39,8 @@ enum Instruction
 //List of data types which the virtual machine supports
 enum class DataType
 {
-    NIL = -1,
+    UNKNOWN = -2,
+    VOID = -1,
     INT = 0,
     CHAR = 1,
     BOOL = 2,
@@ -101,7 +102,9 @@ static DataType stringToDataType(const std::string& type)
         return DataType::CHAR;
     else if(type == "bool")
         return DataType::BOOL;
-    return DataType::NIL;
+    else if(type == "void")
+        return DataType::VOID;
+    return DataType::UNKNOWN;
 }
 
 struct Scope
@@ -120,8 +123,9 @@ struct Scope
         statementPos = 0;
         stackSize = 0;
         bytecodeSizeBefore = 0;
+        returnType = DataType::UNKNOWN;
     }
-    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, std::string sincrem, std::string sidentifier, unsigned int sizeBefore, ScopeType &t)
+    Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, std::string sincrem, std::string sidentifier, unsigned int sizeBefore, DataType returnT, ScopeType &t)
     {
         statementPos = statPos;
         startPos = spos;
@@ -131,6 +135,7 @@ struct Scope
         incrementor = sincrem;
         identifier = sidentifier;
         bytecodeSizeBefore = sizeBefore;
+        returnType = returnT;
     }
     void reset() //Resets the struct to default values. MUST be called before a new expected scope is set up if the variable has previously been used
     {
@@ -147,5 +152,6 @@ struct Scope
     std::string identifier;
     bool wasOptimisedOut;
     unsigned int argumentCount;
+    DataType returnType;
 };
 #endif // VMTYPES_H

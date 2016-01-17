@@ -66,7 +66,7 @@ void Compiler::processLine(const std::vector<std::string>& line)
     //Check to see what the line wants to do
     if(line[0] == "Console")
         processConsole(line);
-    else if((stringToDataType(line[0]) != DataType::NIL || line[0] == "auto") && !(line.size() > 2 && line[2][0] == '('))
+    else if((stringToDataType(line[0]) != DataType::UNKNOWN || line[0] == "auto") && !(line.size() > 2 && line[2][0] == '('))
         processVariable(line);
     else if(line[0] == "if")
         processIF(line);
@@ -84,8 +84,42 @@ void Compiler::processLine(const std::vector<std::string>& line)
         processFor(line);
     else if(isFunction(line[0]) != -1 || (line.size() > 2 && line[2][0] == '('))
         processFunction(line);
+    else if(line[0] == "return")
+        processReturn(line);
     else //Else unknown
         throw std::string("'" + line[0] + "' is undefined");
+}
+
+void Compiler::processReturn(const std::vector<std::string>& line)
+{
+    //Get ending function
+    if(functionStack.empty())
+        throw std::string("No function to escape from.");
+    Scope &ending = functionStack.back();
+    if(line.size() == 1 && ending.returnType != DataType::VOID) //If no return value is provided and the function is not nil
+    {
+        throw std::string("Expected return value, none given.");
+    }
+
+    //Insert cleanup code
+    unsigned int variablesToRemove = igen.getStackSize() - ending.stackSize;
+    if(variablesToRemove > 0 && ending.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
+    {
+        igen.genStackWalk(variablesToRemove);
+    }
+
+    //Evaluate the return type if any
+    if(ending.returnType != DataType::VOID)
+        evaluateBracket(line[1]);
+
+    //Insert the dynamic goto IF it's not the program entry point
+    if(ending.identifier != "entry")
+    {
+        //Bring exit point to top and write the goto
+        igen.genCloneTop(ending.stackSize);
+        igen.genDynamicGoto();
+    }
+
 }
 
 void Compiler::processGoto(const std::vector<std::string> &line)
@@ -116,7 +150,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
 {
     if(line[0] == "{") //Scope open
     {
-        Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, igen.getStackSize(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.bytecodeSizeBefore, expectedScopeType.type));
+        Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, igen.getStackSize(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.bytecodeSizeBefore, expectedScopeType.returnType, expectedScopeType.type));
         if(expectedScopeType.type == Scope::ELSE)
         {
             Scope &previousScope = pastScopes.back(); // Get preceding scope
@@ -338,10 +372,10 @@ void Compiler::validateArgumentCount(unsigned int expected, unsigned int got)
     }
 }
 
-void Compiler::processFunction(const std::vector<std::string>& line)
+void Compiler::processFunction(const std::vector<std::string>& line, bool destroyReturnValue)
 {
     DataType possibleType = stringToDataType(line[0]);
-    if(possibleType != DataType::NIL && line.size() > 2 && line[2][0] == '(') //If we're defining a function
+    if(possibleType != DataType::UNKNOWN && line.size() > 2 && line[2][0] == '(') //If we're defining a function
     {
         //Reset the expected scope
         expectedScopeType.reset();
@@ -351,6 +385,7 @@ void Compiler::processFunction(const std::vector<std::string>& line)
         expectedScopeType.type = Scope::FUNCTION; //Store the scope type
         expectedScopeType.identifier = line[1]; //Store the function name
         expectedScopeType.incrementor = line[2]; //Store the function arguments
+        expectedScopeType.returnType = possibleType; //Store the return value type
 
         //If this is the program entry point, update the entry point goto position
         if(line[1] == "entry")
@@ -395,13 +430,19 @@ void Compiler::processFunction(const std::vector<std::string>& line)
 
         //Goto the function
         igen.genGoto(scope->startPos);
+
+        //Remove return value if specified
+        if(possibleType != DataType::VOID && destroyReturnValue)
+        {
+            igen.genStackWalk(1);
+        }
     }
 }
 
 void Compiler::processVariable(const std::vector<std::string>& line) //things like "int a = 20"
 {
     DataType possibleType = stringToDataType(line[0]);
-    if(possibleType == DataType::NIL && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
+    if(possibleType == DataType::UNKNOWN && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
     {
         if(line[1] == "=") //If it's a set operation
         {
