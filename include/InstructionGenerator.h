@@ -10,7 +10,7 @@
 class InstructionGenerator : public VirtualStack
 {
     public:
-        InstructionGenerator(std::vector<unsigned char> *bytecodeOut);
+        InstructionGenerator(std::vector<unsigned int> *bytecodeOut);
         virtual ~InstructionGenerator();
         void genConsoleOut(unsigned int argCount);
         void genConsoleIn(const std::string &varDest);
@@ -44,7 +44,7 @@ class InstructionGenerator : public VirtualStack
         void genToString(); //wip
     protected:
     private:
-        std::vector<unsigned char> *bytecode;
+        std::vector<unsigned int> *bytecode;
 };
 
 #endif // INSTRUCTIONGENERATOR_H

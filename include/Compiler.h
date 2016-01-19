@@ -24,7 +24,7 @@ class Compiler
     private:
         Parser parser;
         InstructionGenerator igen;
-        std::vector<unsigned char> bytecode; //Keeps track of bytecode to write to file
+        std::vector<unsigned int> bytecode; //Keeps track of bytecode to write to file
         std::vector<Scope> scopes; //Keeps track of open scopes
         std::vector<Scope> pastScopes; //Keep a log of past scopes
         std::vector<Scope> functionStack; //Keeps track of function depth

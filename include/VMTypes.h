@@ -124,6 +124,7 @@ struct Scope
         stackSize = 0;
         bytecodeSizeBefore = 0;
         returnType = DataType::UNKNOWN;
+        scopeReturned = false;
     }
     Scope(unsigned int statPos, unsigned int spos, unsigned int sdep, unsigned int ssize, std::string sincrem, std::string sidentifier, unsigned int sizeBefore, DataType returnT, ScopeType &t)
     {
@@ -153,5 +154,6 @@ struct Scope
     bool wasOptimisedOut;
     unsigned int argumentCount;
     DataType returnType;
+    bool scopeReturned;
 };
 #endif // VMTYPES_H

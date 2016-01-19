@@ -1,6 +1,6 @@
 #include "InstructionGenerator.h"
 
-InstructionGenerator::InstructionGenerator(std::vector<unsigned char> *bytecodeOut)
+InstructionGenerator::InstructionGenerator(std::vector<unsigned int> *bytecodeOut)
 : bytecode(bytecodeOut)
 {
     //ctor

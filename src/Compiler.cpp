@@ -53,7 +53,7 @@ bool Compiler::compile(std::vector<std::string> &data)
     }
 
     //Save to file
-    BytecodeIO::writeBytecode("out.fry", &bytecode);
+    BytecodeIO::writeBytecode("out.fry", bytecode);
     return true;
 }
 
@@ -672,7 +672,6 @@ void Compiler::displayWarning(const std::string& message)
 {
     std::cout << "\nWarning on line " << line << ": " << message << std::endl;
 }
-
 
 
 
