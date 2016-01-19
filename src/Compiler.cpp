@@ -100,26 +100,20 @@ void Compiler::processReturn(const std::vector<std::string>& line)
     {
         throw std::string("Expected return value, none given.");
     }
-
-    //Insert cleanup code
-    unsigned int variablesToRemove = igen.getStackSize() - ending.stackSize;
-    if(variablesToRemove > 0 && ending.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
+    if(ending.returnType == DataType::VOID && line.size() > 1) //If too many arguments
     {
-        igen.genStackWalk(variablesToRemove);
+        throw std::string("Function type is void, no return value expected.");
     }
 
     //Evaluate the return type if any
     if(ending.returnType != DataType::VOID)
-        evaluateBracket(line[1]);
-
-    //Insert the dynamic goto IF it's not the program entry point
-    if(ending.identifier != "entry")
     {
-        //Bring exit point to top and write the goto
-        igen.genCloneTop(ending.stackSize);
-        igen.genDynamicGoto();
+        evaluateBracket(line[1]);
+        igen.genSetVariable((igen.getStackSize() - ending.stackSize) + 1);
     }
 
+    igen.genGoto(0); //0 For now, will be filled in once function end point is known
+    functionEndGotos.emplace_back(std::make_pair(functionStack.size()-1, bytecode.size()-1));
 }
 
 void Compiler::processGoto(const std::vector<std::string> &line)
@@ -253,6 +247,13 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     Scope endingScope = functionStack.back();
                     functionStack.pop_back();
 
+                    //Set the function return gotos for this scope
+                    while(!functionEndGotos.empty() && functionEndGotos.back().first == functionStack.size())
+                    {
+                        bytecode[functionEndGotos.back().second] = bytecode.size();
+                        functionEndGotos.pop_back();
+                    }
+
                     //Erase variables created except the exit point
                     unsigned int variablesToRemove = igen.getStackSize() - endingScope.stackSize;
                     if(variablesToRemove > 0 && endingScope.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
@@ -264,7 +265,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     if(endingScope.identifier != "entry")
                     {
                         //Bring exit point to top and write the goto
-                        igen.genCloneTop(endingScope.stackSize);
+                        igen.push(Variable("rv", DataType::INT));
                         igen.genDynamicGoto();
                     }
                 }
@@ -393,27 +394,16 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
     }
     else
     {
-        //Find the function's starting point from lastScopes
-        Scope *scope; //Scope we're calling
-        auto scopeIter = std::find_if(pastScopes.begin(), pastScopes.end(), [&] (const Scope &next) {if(next.identifier == line[0]){return true;}return false;});
-        if(scopeIter == pastScopes.end()) //If it wasn't found in last scopes
-        {
-            if(expectedScopeType.identifier == line[0]) //If we're recursively calling the current scope
-            {
-                scope = &expectedScopeType; //Set found scope pointer to current scope
-            }
-            else //Else not found
-            {
-                throw std::string("Failed to find entry point for '" + line[0] + "'");
-            }
-        }
-        else
-        {
-            scope = &(*scopeIter); //Set found scope pointer to the correct past scope
-        }
+        Scope *scope = getPastScope(line[0]);
+        if(scope == nullptr)
+            throw std::string("Failed to find entry point for '" + line[0] + "'");
+        //Reserve space for return value if needed
+        if(scope->returnType != DataType::VOID)
+            igen.genCreateDefaultValue("", scope->returnType);
 
         //Create the exit point
         igen.genCreateInt("functionEnd", 0); //Add a bit for the stack walk below
+        igen.pop(); //But remove it from the compiler as the function will remove it when it ends
         unsigned int exitPointPos = bytecode.size()-1;
 
         //Evaluate arguments, adding to the stack
@@ -432,7 +422,7 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
         igen.genGoto(scope->startPos);
 
         //Remove return value if specified
-        if(possibleType != DataType::VOID && destroyReturnValue)
+        if(scope->returnType != DataType::VOID && destroyReturnValue)
         {
             igen.genStackWalk(1);
         }
@@ -556,6 +546,10 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
         {
             igen.genCloneTop(data);
         }
+        else if(getPastScope(data) != nullptr) //Else if it's a function
+        {
+            processFunction({data, ""}, false);
+        }
         else //Else if it's raw data
         {
             if(data[0] == '"') //If string
@@ -673,6 +667,17 @@ void Compiler::displayWarning(const std::string& message)
     std::cout << "\nWarning on line " << line << ": " << message << std::endl;
 }
 
+Scope *Compiler::getPastScope(const std::string& identifier)
+{
+    //Find the function's starting point from lastScopes
+    Scope *scope = nullptr; //Scope we're calling
+    auto scopeIter = std::find_if(pastScopes.begin(), pastScopes.end(), [&] (const Scope &next) {if(next.identifier == identifier){return true;}return false;});
+    if(scopeIter != pastScopes.end()) //If it was found
+    {
+        scope = &(*scopeIter); //Set found scope pointer to the correct past scope
+    }
+    return scope;
+}
 
 
 

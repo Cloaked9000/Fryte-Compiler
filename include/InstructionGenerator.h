@@ -42,6 +42,7 @@ class InstructionGenerator : public VirtualStack
         void genOperator(Instruction op, unsigned int argCount);
         void genToInteger(); //wip
         void genToString(); //wip
+        void genCreateDefaultValue(const std::string &identifier, DataType type);
     protected:
     private:
         std::vector<unsigned int> *bytecode;

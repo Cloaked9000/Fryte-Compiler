@@ -238,3 +238,25 @@ void InstructionGenerator::genOperator(Instruction op, unsigned int argCount)
     }
     push(Variable("", type));
 }
+
+void InstructionGenerator::genCreateDefaultValue(const std::string &identifier, DataType type)
+{
+    switch(type)
+    {
+    case DataType::BOOL:
+        genCreateBool(identifier);
+    break;
+    case DataType::CHAR:
+        genCreateChar(identifier);
+        break;
+    case DataType::INT:
+        genCreateInt(identifier);
+        break;
+    case DataType::STRING:
+        genCreateString(identifier);
+        break;
+    default:
+        throw std::string("Unknown type passed to pushDefaultType!");
+    }
+}
+

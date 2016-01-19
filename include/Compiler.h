@@ -25,6 +25,7 @@ class Compiler
         Parser parser;
         InstructionGenerator igen;
         std::vector<unsigned int> bytecode; //Keeps track of bytecode to write to file
+        std::vector<std::pair<unsigned int, unsigned int>> functionEndGotos; //Keep track of return gotos that still need to be set
         std::vector<Scope> scopes; //Keeps track of open scopes
         std::vector<Scope> pastScopes; //Keep a log of past scopes
         std::vector<Scope> functionStack; //Keeps track of function depth
@@ -66,6 +67,8 @@ class Compiler
         unsigned int evaluateBracket(std::string line); //Converts bracket information into stack instructions. Returns the number of things added to the stack.
 
         void displayWarning(const std::string &message);
+
+        Scope *getPastScope(const std::string &identifier); //Returns a pointer to a past scope. Pointer to a vector so DO NOT store for long.
 };
 
 #endif // COMPILER_H
