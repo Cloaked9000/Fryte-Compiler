@@ -154,7 +154,6 @@ void Compiler::processScope(const std::vector<std::string> &line)
         }
         else if(expectedScopeType.type == Scope::FUNCTION)
         {
-            igen.push(Variable("returnPoint", DataType::INT));
             std::vector<std::vector<std::string>> argumentNames;
             parser.tokenizeFile(parser.extractBracketArguments(newScope.incrementor), argumentNames);
             for(auto iter = argumentNames.rbegin(); iter != argumentNames.rend(); iter++)
@@ -257,9 +256,10 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
                     //Erase variables created except the exit point
                     unsigned int variablesToRemove = igen.getStackSize() - endingScope.stackSize;
-                    if(variablesToRemove > 1 && endingScope.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
+                    if(variablesToRemove > 0 && endingScope.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
                     {
-                        igen.genStackWalk(variablesToRemove-1);
+                        igen.push(Variable("returnPoint", DataType::INT));
+                        igen.genStackWalk(variablesToRemove);
                     }
 
                     //Insert the dynamic goto IF it's not the program entry point
@@ -422,6 +422,13 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
         //Remove exit point, it will have been used by the function
         igen.pop();
 
+        //Remove return value space
+        if(scope->returnType != DataType::VOID)
+            igen.pop();
+
+        //Push the return value which will now be on the stack
+        igen.push(Variable("rv", scope->returnType));
+
         //Remove return value if specified
         if(scope->returnType != DataType::VOID && destroyReturnValue)
         {
@@ -547,10 +554,6 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
         {
             igen.genCloneTop(data);
         }
-        else if(getPastScope(data) != nullptr) //Else if it's a function
-        {
-            processFunction({data, ""}, false);
-        }
         else //Else if it's raw data
         {
             if(data[0] == '"') //If string
@@ -635,29 +638,46 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
         parser.extractBracket(line, components);
 
         //Split segments by space
-        for(const auto &segment : components)
+        for(unsigned int a = 0; a < components.size(); a++)
         {
-            std::cout << "\nSegment: " << segment;
-            //Split by space
-            std::string peiceBuffer;
-            std::vector<std::string> subSegment;
-            bool isQuoteOpen = false;
-            for(unsigned int c = 0; c < segment.size(); c++)
+            const std::string &segment = components[a];
+
+            //If it's a function, call it
+            Scope *possibleFunction = getPastScope(segment);
+            if(possibleFunction != nullptr) //It's a function
             {
-                if(segment[c] == '"')
-                    isQuoteOpen = !isQuoteOpen;
-                if(segment[c] == ' ' && isQuoteOpen == false)
-                {
-                    subSegment.emplace_back(peiceBuffer);
-                    peiceBuffer.clear();
-                }
-                else
-                {
-                    peiceBuffer += segment[c];
-                }
+                //Take arguments from next segment only if the function accepts arguments
+                std::string arg;
+                if(possibleFunction->argumentCount > 0)
+                    arg = components[++a];
+
+                //Call it with the provided arguments if any, not destroying the return value
+                processFunction({segment, arg}, false);
+                variablesOnStack++;
             }
-            subSegment.emplace_back(peiceBuffer);
-            handleSubSegment(subSegment);
+            else //It's not a function
+            {
+                //Split by space
+                std::string peiceBuffer;
+                std::vector<std::string> subSegment;
+                bool isQuoteOpen = false;
+                for(unsigned int c = 0; c < segment.size(); c++)
+                {
+                    if(segment[c] == '"')
+                        isQuoteOpen = !isQuoteOpen;
+                    if(segment[c] == ' ' && isQuoteOpen == false)
+                    {
+                        subSegment.emplace_back(peiceBuffer);
+                        peiceBuffer.clear();
+                    }
+                    else
+                    {
+                        peiceBuffer += segment[c];
+                    }
+                }
+                subSegment.emplace_back(peiceBuffer);
+                handleSubSegment(subSegment);
+            }
         }
     }
     variablesOnStack = oldVariablesOnStack + arguments.size();
@@ -677,6 +697,10 @@ Scope *Compiler::getPastScope(const std::string& identifier)
     if(scopeIter != pastScopes.end()) //If it was found
     {
         scope = &(*scopeIter); //Set found scope pointer to the correct past scope
+    }
+    if(scope == nullptr && identifier == expectedScopeType.identifier) //If we're recursively calling this scope
+    {
+        scope = &expectedScopeType;
     }
     return scope;
 }

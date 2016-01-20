@@ -270,6 +270,7 @@ std::vector<std::string> Parser::extractBracketArguments(std::string data)
     std::vector<std::string> arguments;
     std::string argumentBuffer;
     bool isQuoteOpen = false;
+    int bracketDepth = 0;
 
     //Take off surrounding brackets if any as these aren't needed in the split results
     if(data[0] == '(')
@@ -282,7 +283,11 @@ std::vector<std::string> Parser::extractBracketArguments(std::string data)
     {
         if(data[c] == '"')
             isQuoteOpen = !isQuoteOpen;
-        if(data[c] == ',' && !argumentBuffer.empty() && !isQuoteOpen)
+        if(data[c] == '(')
+            bracketDepth++;
+        else if(data[c] == ')')
+            bracketDepth--;
+        if(data[c] == ',' && !argumentBuffer.empty() && !isQuoteOpen && bracketDepth == 0)
         {
             arguments.emplace_back(argumentBuffer);
             argumentBuffer.clear();
