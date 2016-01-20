@@ -13,6 +13,7 @@ VirtualStack::~VirtualStack()
 
 void VirtualStack::push(const Variable& var)
 {
+    //std::cout << "\nPush type: " << dataTypeToString(var.type) << ". Stack size: " << stackOffset;
     if(stackOffset == maxStackSize)
         throw std::string("Can't push to virtual stack, stack full");
     stack[stackOffset++] = var;
@@ -20,6 +21,7 @@ void VirtualStack::push(const Variable& var)
 
 Variable VirtualStack::pop()
 {
+   // std::cout << "\nPop type: " << dataTypeToString(stack[stackOffset-1].type) << ". Stack size: " << stackOffset-1;
     if(stackOffset == 0)
         throw std::string("Can't pop from virtual stack, stack empty");
     return stack[--stackOffset];

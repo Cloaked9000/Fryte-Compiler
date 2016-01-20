@@ -154,6 +154,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
         }
         else if(expectedScopeType.type == Scope::FUNCTION)
         {
+            igen.push(Variable("returnPoint", DataType::INT));
             std::vector<std::vector<std::string>> argumentNames;
             parser.tokenizeFile(parser.extractBracketArguments(newScope.incrementor), argumentNames);
             for(auto iter = argumentNames.rbegin(); iter != argumentNames.rend(); iter++)
@@ -256,16 +257,15 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
                     //Erase variables created except the exit point
                     unsigned int variablesToRemove = igen.getStackSize() - endingScope.stackSize;
-                    if(variablesToRemove > 0 && endingScope.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
+                    if(variablesToRemove > 1 && endingScope.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
                     {
-                        igen.genStackWalk(variablesToRemove);
+                        igen.genStackWalk(variablesToRemove-1);
                     }
 
                     //Insert the dynamic goto IF it's not the program entry point
                     if(endingScope.identifier != "entry")
                     {
                         //Bring exit point to top and write the goto
-                        igen.push(Variable("rv", DataType::INT));
                         igen.genDynamicGoto();
                     }
                 }
@@ -403,14 +403,12 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
 
         //Create the exit point
         igen.genCreateInt("functionEnd", 0); //Add a bit for the stack walk below
-        igen.pop(); //But remove it from the compiler as the function will remove it when it ends
         unsigned int exitPointPos = bytecode.size()-1;
 
         //Evaluate arguments, adding to the stack
         unsigned int sizeBeforeEvaluation = igen.getStackSize();
         evaluateBracket(line[1]);
         unsigned int sizeAfterEvaluation = igen.getStackSize();
-
         //Artificially remove them from the compiler's stack, as the values are already cleaned up by the function scope end
         for(unsigned int a = sizeBeforeEvaluation; a < sizeAfterEvaluation; a++)
             igen.pop();
@@ -420,6 +418,9 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
 
         //Goto the function
         igen.genGoto(scope->startPos);
+
+        //Remove exit point, it will have been used by the function
+        igen.pop();
 
         //Remove return value if specified
         if(scope->returnType != DataType::VOID && destroyReturnValue)
@@ -636,6 +637,7 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
         //Split segments by space
         for(const auto &segment : components)
         {
+            std::cout << "\nSegment: " << segment;
             //Split by space
             std::string peiceBuffer;
             std::vector<std::string> subSegment;

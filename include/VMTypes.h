@@ -107,6 +107,21 @@ static DataType stringToDataType(const std::string& type)
     return DataType::UNKNOWN;
 }
 
+static std::string dataTypeToString(DataType type)
+{
+    if(type == DataType::INT)
+        return "int";
+    else if(type == DataType::STRING)
+        return "string";
+    else if(type == DataType::CHAR)
+        return "char";
+    else if(type == DataType::BOOL)
+        return "bool";
+    else if(type == DataType::VOID)
+        return "void";
+    return "unknown";
+}
+
 struct Scope
 {
     enum ScopeType

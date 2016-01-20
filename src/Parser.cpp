@@ -152,6 +152,7 @@ void Parser::extractBracket(const std::string &bracket, std::vector<std::string>
     std::string bracketBuffer;
     std::string bracketOperator;
     bool isQuoteOpen = false;
+    std::string preBracketInfo;
 
     //Iterate through each character in the vector and process it
     for(unsigned int a = 0; a < bracket.size(); a++)
@@ -163,6 +164,7 @@ void Parser::extractBracket(const std::string &bracket, std::vector<std::string>
         //If a bracket is open, add the data to the bracket buffer
         if(bracketStartPos != -1)
             bracketBuffer += bracket[a];
+
 
         //Else if dual-character operator. Temporary fix.
         else if(!isQuoteOpen && a != bracket.size() && stringToInstruction(bracket.substr(a, 2)) != -1)
@@ -176,6 +178,10 @@ void Parser::extractBracket(const std::string &bracket, std::vector<std::string>
         {
             bracketOperator = bracket.substr(a, 1);
         }
+        else if(bracket[a] != '(' && bracket[a] != ')')
+        {
+            preBracketInfo += bracket[a];
+        }
 
         //If quotes are not open do these checks
         if(!isQuoteOpen)
@@ -186,6 +192,22 @@ void Parser::extractBracket(const std::string &bracket, std::vector<std::string>
                 {
                     bracketStartLayer = bracketDepth;
                     bracketStartPos = a;
+
+                    if(!preBracketInfo.empty())
+                    {
+                        while(preBracketInfo[0] == ' ')
+                            preBracketInfo.erase(0, 1);
+                    }
+                    if(!preBracketInfo.empty())
+                    {
+                        while(preBracketInfo[preBracketInfo.size()-1] == ' ')
+                            preBracketInfo.erase(preBracketInfo.size()-1, 1);
+                    }
+                    if(!preBracketInfo.empty())
+                    {
+                        results.emplace_back(preBracketInfo);
+                        preBracketInfo.clear();
+                    }
                 }
                 bracketDepth++;
             }
@@ -204,6 +226,7 @@ void Parser::extractBracket(const std::string &bracket, std::vector<std::string>
                     }
                     else //Else it contains a sub-bracket so recursively extract it
                     {
+                        bracketBuffer.erase(bracketBuffer.size()-1, 1);
                         extractBracket(bracketBuffer, results);
                     }
 
