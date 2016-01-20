@@ -258,14 +258,13 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     unsigned int variablesToRemove = igen.getStackSize() - endingScope.stackSize;
                     if(variablesToRemove > 0 && endingScope.identifier != "entry") //Only resize if there's things to remove and this isn't the program end
                     {
-                        igen.push(Variable("returnPoint", DataType::INT));
                         igen.genStackWalk(variablesToRemove);
                     }
 
                     //Insert the dynamic goto IF it's not the program entry point
                     if(endingScope.identifier != "entry")
                     {
-                        //Bring exit point to top and write the goto
+                        igen.push(Variable("returnPoint", DataType::INT));
                         igen.genDynamicGoto();
                     }
                 }
@@ -397,6 +396,7 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
         Scope *scope = getPastScope(line[0]);
         if(scope == nullptr)
             throw std::string("Failed to find entry point for '" + line[0] + "'");
+
         //Reserve space for return value if needed
         if(scope->returnType != DataType::VOID)
             igen.genCreateDefaultValue("", scope->returnType);
@@ -409,6 +409,7 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
         unsigned int sizeBeforeEvaluation = igen.getStackSize();
         evaluateBracket(line[1]);
         unsigned int sizeAfterEvaluation = igen.getStackSize();
+
         //Artificially remove them from the compiler's stack, as the values are already cleaned up by the function scope end
         for(unsigned int a = sizeBeforeEvaluation; a < sizeAfterEvaluation; a++)
             igen.pop();
@@ -421,13 +422,6 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
 
         //Remove exit point, it will have been used by the function
         igen.pop();
-
-        //Remove return value space
-        if(scope->returnType != DataType::VOID)
-            igen.pop();
-
-        //Push the return value which will now be on the stack
-        igen.push(Variable("rv", scope->returnType));
 
         //Remove return value if specified
         if(scope->returnType != DataType::VOID && destroyReturnValue)
@@ -546,7 +540,7 @@ void Compiler::processConsole(const std::vector<std::string>& line)
 
 unsigned int Compiler::evaluateBracket(std::string originalLine)
 {
-    unsigned int oldVariablesOnStack = variablesOnStack;
+    unsigned int variablesOnStack = 0;
     variablesOnStack = 0;
     auto addVariableToStack = [&] (const std::string &data) -> void
     {
@@ -680,7 +674,6 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             }
         }
     }
-    variablesOnStack = oldVariablesOnStack + arguments.size();
     return 0;
 }
 

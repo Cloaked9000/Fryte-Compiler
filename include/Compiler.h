@@ -36,8 +36,6 @@ class Compiler
 
         unsigned int line; //Current line being compiled
 
-        unsigned int variablesOnStack = 0;
-
         void validateArgumentCount(unsigned int expected, unsigned int got);
 
         void processReturn(const std::vector<std::string>& line);
