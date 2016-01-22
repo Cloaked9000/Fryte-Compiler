@@ -439,7 +439,7 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
         if(line[1] == "=") //If it's a set operation
         {
             //Evaluate the bracket containing what the variable should be set to
-            evaluateBracket("(" + line[2] + ")");
+            evaluateBracket("(" + parser.combineArguments(line, 2, line.size() - 2) + ")");
         }
         else //Else if it's a math operation
         {
@@ -447,7 +447,7 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
             igen.genCloneTop(line[0]);
 
             //Evaluate the bracket containing what the variable should be set to
-            evaluateBracket("(" + line[2] + ")");
+            evaluateBracket("(" + parser.combineArguments(line, 2, line.size() - 2) + ")");
 
             //Do different things depending on the assignment operator
             if(line[1] == "*=")
@@ -482,8 +482,8 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
         DataType type = stringToDataType(line[0]);
         if(line.size() > 2) //If there's a value provided (int a = 20)
         {
-            //Convert initial value to bytecode
-            evaluateBracket("(" + line[3] + ")");
+            //Evaluate value to set it to and name the variable
+            evaluateBracket("(" + parser.combineArguments(line, 3, line.size() - 3) + ")");
             igen.renameVariable(igen.getStackSize()-1, line[1]);
         }
         else //Else no default value provided (int a)

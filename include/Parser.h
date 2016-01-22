@@ -20,6 +20,7 @@ class Parser
         void extractBracket(const std::string &bracket, std::vector<std::string> &results); //Extract all brackets in a line and move into a vector
         void processEscapeSequences(std::string &data); //Replace things like '\n' with the newline character
         std::vector<std::string> extractBracketArguments(std::string data); //Extracts comma separated arguments out of a bracket
+        std::string combineArguments(const std::vector<std::string> &args, unsigned int first, unsigned int count); //As arguments can be split over several vector elements, they need to be put together before being evaluated
     protected:
     private:
         void replaceAll(std::string &data, const std::string &from, const std::string &to); //Replaces all instances of a string with another

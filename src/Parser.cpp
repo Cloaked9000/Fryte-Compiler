@@ -311,3 +311,12 @@ std::vector<std::string> Parser::extractBracketArguments(std::string data)
 
     return arguments;
 }
+
+std::string Parser::combineArguments(const std::vector<std::string>& args, unsigned int first, unsigned int count)
+{
+    std::string rv;
+    for(unsigned int a = 0; a < count; a++)
+        rv += (args[first + a] + " ");
+    rv.erase(rv.size()-1, 1);
+    return rv;
+}
