@@ -41,7 +41,7 @@ bool BytecodeIO::writeBytecode(const std::string& filepath, const std::vector<un
 
     std::cout << "\nBytecode: ";
     for(const auto &byte: bytecode)
-        std::cout << (int)byte << ", ";
+        std::cout << (unsigned int)byte << ", ";
     std::cout << std::endl;
     file.close();
     return true;

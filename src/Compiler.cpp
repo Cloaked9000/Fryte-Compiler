@@ -568,7 +568,7 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
             }
             else //Else if number
             {
-                igen.genCreateInt("", stoi(data));
+                igen.genCreateInt("", stoull(data));
             }
         }
     };
