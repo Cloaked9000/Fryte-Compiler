@@ -13,7 +13,7 @@ Compiler::~Compiler()
 
 int Compiler::isFunction(const std::string& identifier)
 {
-    for(unsigned int a = 0; a < functions.size(); a++)
+    for(unsigned int a = functions.size()-1; a > 0; a++)
     {
         if(functions[a].identifier == identifier)
             return a; //Found, return position

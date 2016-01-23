@@ -116,7 +116,7 @@ std::string Parser::bracketOperatorFix(const std::string &data)
         }
 
         //Else if dual-character operator. Temporary fix.
-        else if(!isQuoteOpen && a != data.size() && stringToInstruction(data.substr(a, 2)) != -1)
+        else if(!isQuoteOpen && a != data.size() && stringToInstruction(data.substr(a, 2)) != Instruction::NONE)
         {
             bracketOperators[currentLayer] = data.substr(a, 2);
             returnValue.erase(returnValue.size()-1, 1);
@@ -124,10 +124,16 @@ std::string Parser::bracketOperatorFix(const std::string &data)
         }
 
         //Else if a single-character operator, don't add the operator to the return value and store this layer's operator
-        else if(!isQuoteOpen && stringToInstruction(data.substr(a, 1)) != -1)
+        else if(!isQuoteOpen && stringToInstruction(data.substr(a, 1)) != Instruction::NONE)
         {
-            bracketOperators[currentLayer] = data.substr(a, 1);
-            returnValue.erase(returnValue.size()-1, 1);
+            std::string newOperator = data.substr(a, 1);
+            if(!bracketOperators[currentLayer].empty() && newOperator != bracketOperators[currentLayer])
+            {
+                throw std::string("Please only use one operator per bracket at the moment");
+            }
+
+            bracketOperators[currentLayer] = newOperator;
+            returnValue.erase(returnValue.size()-newOperator.size(), newOperator.size());
         }
 
         //Else, store current character. Not important.
@@ -167,14 +173,14 @@ void Parser::extractBracket(const std::string &bracket, std::vector<std::string>
 
 
         //Else if dual-character operator. Temporary fix.
-        else if(!isQuoteOpen && a != bracket.size() && stringToInstruction(bracket.substr(a, 2)) != -1)
+        else if(!isQuoteOpen && a != bracket.size() && stringToInstruction(bracket.substr(a, 2)) != Instruction::NONE)
         {
             bracketOperator = bracket.substr(a, 2);
             a++;
         }
 
         //Else if a single-character operator, don't add the operator to the return value and store this layer's operator
-        else if(!isQuoteOpen && stringToInstruction(bracket.substr(a, 1)) != -1)
+        else if(!isQuoteOpen && stringToInstruction(bracket.substr(a, 1)) != Instruction::NONE)
         {
             bracketOperator = bracket.substr(a, 1);
         }
@@ -283,10 +289,12 @@ std::vector<std::string> Parser::extractBracketArguments(std::string data)
     {
         if(data[c] == '"')
             isQuoteOpen = !isQuoteOpen;
-        if(data[c] == '(')
+        if(data[c] == '(' && !isQuoteOpen)
             bracketDepth++;
-        else if(data[c] == ')')
+        else if(data[c] == ')' && !isQuoteOpen)
             bracketDepth--;
+        if(bracketDepth < 0)
+            throw std::string("Bracket mismatch");
         if(data[c] == ',' && !argumentBuffer.empty() && !isQuoteOpen && bracketDepth == 0)
         {
             arguments.emplace_back(argumentBuffer);
