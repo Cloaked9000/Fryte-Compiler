@@ -13,7 +13,7 @@ Compiler::~Compiler()
 
 int Compiler::isFunction(const std::string& identifier)
 {
-    for(unsigned int a = functions.size()-1; a > 0; a++)
+    for(unsigned int a = functions.size(); a-- > 0;)
     {
         if(functions[a].identifier == identifier)
             return a; //Found, return position
@@ -648,6 +648,7 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
                 //Call it with the provided arguments if any, not destroying the return value
                 processFunction({segment, arg}, false);
                 variablesOnStack++;
+                a++;
             }
             else //It's not a function
             {
@@ -686,8 +687,8 @@ Scope *Compiler::getPastScope(const std::string& identifier)
 {
     //Find the function's starting point from lastScopes
     Scope *scope = nullptr; //Scope we're calling
-    auto scopeIter = std::find_if(pastScopes.begin(), pastScopes.end(), [&] (const Scope &next) {if(next.identifier == identifier){return true;}return false;});
-    if(scopeIter != pastScopes.end()) //If it was found
+    auto scopeIter = std::find_if(pastScopes.rbegin(), pastScopes.rend(), [&] (const Scope &next) {if(next.identifier == identifier){return true;}return false;});
+    if(scopeIter != pastScopes.rend()) //If it was found
     {
         scope = &(*scopeIter); //Set found scope pointer to the correct past scope
     }
