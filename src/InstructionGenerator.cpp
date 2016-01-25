@@ -13,11 +13,10 @@ InstructionGenerator::~InstructionGenerator()
 
 void InstructionGenerator::genConsoleOut(unsigned int argCount)
 {
+    bytecode->emplace_back(Instruction::CONSOLE_OUT);
+    bytecode->emplace_back(argCount);
     for(unsigned int a = 0; a < argCount; a++)
-    {
-        bytecode->emplace_back(Instruction::CONSOLE_OUT);
         pop();
-    }
 }
 
 void InstructionGenerator::genConsoleIn(const std::string &varDest)

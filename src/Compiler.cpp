@@ -163,7 +163,6 @@ void Compiler::processScope(const std::vector<std::string> &line)
             newScope.argumentCount = argumentNames.size();
             functionStack.emplace_back(newScope);
         }
-
         scopes.emplace_back(newScope);
         scopeDepth++;
     }
@@ -194,12 +193,12 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
 
                 //Called to clear this scope's variables
-                auto clearScopeVariables = [&]()
+                auto clearScopeVariables = [&](unsigned int extraAmount = 0)
                 {
                     //Remove variables created in the scope IF there's any
-                    if(igen.getStackSize() != current.stackSize)
+                    if(igen.getStackSize() != current.stackSize || extraAmount > 0)
                     {
-                        igen.genStackWalk(igen.getStackSize() - current.stackSize);
+                        igen.genStackWalk((igen.getStackSize() - current.stackSize) + extraAmount);
                     }
                 };
 

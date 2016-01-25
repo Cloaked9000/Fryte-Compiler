@@ -7,7 +7,7 @@ enum Instruction
     NONE = -1, //Indicates not found, compiler side only
 
     //BOTH COMPILER AND INTERPRETER
-    CONSOLE_OUT = 0, //Prints out value, CONSOLE_OUT(data)
+    CONSOLE_OUT = 0, //Prints out a series of values, CONSOLE_OUT(argCount, data)
     CREATE_INT = 1, //Pushes an integer to the stack, CREATE_INT(data)
     CREATE_CHAR = 2, //Pushes a character to the stack, CREATE_CHAR(data)
     CREATE_BOOL = 3, //Pushes a boolean to the stack, CREATE_BOOL(data)
