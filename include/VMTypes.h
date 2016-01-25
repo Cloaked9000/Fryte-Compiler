@@ -34,6 +34,7 @@ enum Instruction
     DYNAMIC_GOTO = 24, //Sets the bytecode to a position which is found on top of the stack. DYNAMIC_GOTO(pos)
     TO_INTEGER = 25, //Converts the value on the top of the stack to a string and pushes the new value
     TO_STRING = 26, //Converts the value on the top of the stack to an integer and then pushes the new value
+    COMPARE_AND = 27, //Compares a series of values. If all are true, push true, else push false. COMPARE_AND(ArgCount, Args...)
 };
 
 //List of data types which the virtual machine supports
@@ -86,7 +87,7 @@ static Instruction stringToInstruction(const std::string& operation)
     else if(operation == ">=")
         return Instruction::COMPARE_MORE_THAN_OR_EQUAL;
     else if(operation == "&")
-        return Instruction::COMPARE_EQUAL;
+        return Instruction::COMPARE_AND;
     else if(operation == "|")
         return Instruction::COMPARE_OR;
     return NONE; //Not found
