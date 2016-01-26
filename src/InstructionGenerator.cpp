@@ -215,6 +215,9 @@ void InstructionGenerator::genCompareOr(unsigned int argCount)
 
 void InstructionGenerator::genStackWalk(unsigned int pos)
 {
+    if(pos == 0) //If no point in resizing, don't do it
+        return;
+
     bytecode->emplace_back(Instruction::STACK_WALK);
     bytecode->emplace_back(pos);
     resize(pos);

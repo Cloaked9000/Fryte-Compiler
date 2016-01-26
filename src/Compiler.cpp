@@ -144,7 +144,12 @@ void Compiler::processScope(const std::vector<std::string> &line)
 {
     if(line[0] == "{") //Scope open
     {
-        Scope newScope(Scope(expectedScopeType.statementPos, bytecode.size(), scopeDepth, igen.getStackSize(), expectedScopeType.incrementor, expectedScopeType.identifier, expectedScopeType.bytecodeSizeBefore, expectedScopeType.returnType, expectedScopeType.type));
+        //Setup the new scope, taking details from the expected scope and filling in the '{' dependent stuff
+        Scope newScope = expectedScopeType;
+        newScope.startPos = bytecode.size();
+        newScope.scopeDepth = scopeDepth;
+        newScope.stackSize = igen.getStackSize();
+
         if(expectedScopeType.type == Scope::ELSE)
         {
             Scope &previousScope = pastScopes.back(); // Get preceding scope
@@ -231,6 +236,9 @@ void Compiler::processScope(const std::vector<std::string> &line)
                     processVariable(initialisationArguments[0]);
                     igen.genGoto(current.statementPos);
                     bytecode[current.startPos-1] = bytecode.size()-1;
+
+                    //Remove initialization variables if needed
+                    igen.genStackWalk(current.initialisationVariableCount);
                 }
                 else if(current.type == Scope::ELSE)
                 {
@@ -305,7 +313,9 @@ void Compiler::processFor(const std::vector<std::string>& line)
 
     //The for loop initialisation data must be parsed first and then passed to processVariable
     parser.tokenizeFile({arguments[0]}, initialisationArguments);
+    unsigned int stackSizeBeforeInit = igen.getStackSize();
     processVariable(initialisationArguments[0]);
+    expectedScopeType.initialisationVariableCount = igen.getStackSize() - stackSizeBeforeInit;
 
     //We set the statement position AFTER the loop initialisation, as we don't want the it to initialise every loop
     expectedScopeType.statementPos = bytecode.size();
