@@ -26,16 +26,25 @@ Functions with arguments and return statements which can return values
 # Sample program
 
 ```
-int sayHello(string name)
-{
-    Console.print("Hello, ", name, "!")
-}
-int entry()
+string getName()
 {
     string name
-    Console.print("What is your name?\n")
+    Console.print("\nWhat is your name? ")
     Console.scan(name)
-    sayHello(name)
+    return name
+}
+
+int getAge()
+{
+    int age
+    Console.print("\nWhat is your age? ")
+    Console.scan(age)
+    return age
+}
+
+void entry()
+{
+    Console.print("\nHello ", getName(), ", you are ", getAge(), " years old!")
 }
 ```
 
@@ -65,7 +74,7 @@ while((entered != key) & (attemptsRemaining > 0))
 # Yet another sample program
 
 ```
-for(int a = 0, (a < 10) & (1 == 2), a += 1)
+for(int a = 0, a < 10, a += 1)
 {
     if((a % 2) == (0))
     {
