@@ -40,8 +40,10 @@ enum Instruction
 //List of data types which the virtual machine supports
 enum class DataType
 {
+    //Compiler only types
     UNKNOWN = -2,
     VOID = -1,
+    //Compiler & Interpreter types
     INT = 0,
     CHAR = 1,
     BOOL = 2,
@@ -50,14 +52,16 @@ enum class DataType
 
 struct Variable
 {
-    Variable()=default;
+    DataType type;
+    std::string identifier;
+
+    Variable()
+    : type(DataType::UNKNOWN), identifier("") {}
     Variable(const std::string &name, DataType varType)
     {
         identifier = name;
         type = varType;
     }
-    DataType type;
-    std::string identifier;
 };
 
 static Instruction stringToInstruction(const std::string& operation)

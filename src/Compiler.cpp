@@ -11,20 +11,10 @@ Compiler::~Compiler()
     //dtor
 }
 
-int Compiler::isFunction(const std::string& identifier)
-{
-    for(unsigned int a = functions.size(); a-- > 0;)
-    {
-        if(functions[a].identifier == identifier)
-            return a; //Found, return position
-    }
-    return -1; //Not found
-}
-
 bool Compiler::compile(std::vector<std::string> &data)
 {
-    //Reserve space for the entry point goto
-    igen.genGoto(2); //Two by default, so even if no entry point is defined it wont go into a loop
+    //Write the entry point goto. Will be overwritten if 'entry' is defined. 2 to skip over the goto.
+    igen.genGoto(2);
 
     //Compile the data
     std::vector<std::vector<std::string>> parsedFile;
@@ -82,7 +72,7 @@ void Compiler::processLine(const std::vector<std::string>& line)
         processElse(line);
     else if(line[0] == "for")
         processFor(line);
-    else if(isFunction(line[0]) != -1 || (line.size() > 2 && line[2][0] == '('))
+    else if(getPastScope(line[0]) != nullptr || (line.size() > 2 && line[2][0] == '('))
         processFunction(line);
     else if(line[0] == "return")
         processReturn(line);
@@ -168,7 +158,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
             newScope.argumentCount = argumentNames.size();
             functionStack.emplace_back(newScope);
         }
-        scopes.emplace_back(newScope);
+        openScopeStack.emplace_back(newScope);
         scopeDepth++;
     }
     else if(line[0] == "}") //Scope close
@@ -180,7 +170,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
         }
 
         //Find which scope it is ending
-        for(auto iter = scopes.begin(); iter != scopes.end();)
+        for(auto iter = openScopeStack.begin(); iter != openScopeStack.end();)
         {
             Scope &current = *iter;
 
@@ -283,7 +273,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 //Store the scope in pastScopes and erase it from currentScopes as it's no longer open
                 current.endPos = bytecode.size();
                 pastScopes.emplace_back(*iter);
-                iter = scopes.erase(iter);
+                iter = openScopeStack.erase(iter);
                 break;
             }
             else
@@ -333,6 +323,10 @@ void Compiler::processFor(const std::vector<std::string>& line)
 
 void Compiler::processElse(const std::vector<std::string>& line)
 {
+    //Ensure that previous scope was an else
+    if(pastScopes.back().type != Scope::IF)
+        throw std::string("Else must follow if");
+
     //Reset the expected scope
     expectedScopeType.reset();
 
@@ -390,7 +384,6 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
         expectedScopeType.reset();
 
         //Add the function
-        functions.emplace_back(Variable(line[1], possibleType)); //Register the function
         expectedScopeType.type = Scope::FUNCTION; //Store the scope type
         expectedScopeType.identifier = line[1]; //Store the function name
         expectedScopeType.incrementor = line[2]; //Store the function arguments
