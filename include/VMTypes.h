@@ -41,6 +41,7 @@ enum Instruction
 enum class DataType
 {
     //Compiler only types
+    CLASS = -3,
     UNKNOWN = -2,
     VOID = -1,
     //Compiler & Interpreter types
@@ -131,7 +132,7 @@ struct Scope
 {
     enum ScopeType
     {
-        IF, WHILE, ELSE, FOR, FUNCTION,
+        IF, WHILE, ELSE, FOR, FUNCTION, CLASS
     };
     Scope()
     {
@@ -177,5 +178,8 @@ struct Scope
     DataType returnType;
     bool scopeReturned;
     unsigned int initialisationVariableCount;
+
+    std::vector<Scope> childMemberScopes;
+    std::vector<Variable> childDataMembers;
 };
 #endif // VMTYPES_H

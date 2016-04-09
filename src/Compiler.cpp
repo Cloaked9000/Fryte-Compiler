@@ -32,12 +32,12 @@ bool Compiler::compile(std::vector<std::string> &data)
         }
         catch(const std::exception &e)
         {
-            std::cout << "\nAn internal exception occurred whilst compiling line: "  << line+1 << "\n" << e.what() << std::endl;
+            std::cout << "\nAn internal exception occurred whilst compiling line: "  << line+1 << "\nInformation: " << e.what() << std::endl;
             return false;
         }
         catch(...)
         {
-            std::cout << "\nAn unknown error occurred whilst compiling line: "  << line+1 << std::endl;
+            std::cout << "\nAn unknown error occurred whilst compiling line: " << line+1 << std::endl;
             return false;
         }
     }
@@ -62,6 +62,8 @@ void Compiler::processLine(const std::vector<std::string>& line)
         processIF(line);
     else if((line[0] == "{" || line[0] == "}"))
         processScope(line);
+    else if(line[0] == "class")
+        processClassDefinition(line);
     else if(igen.isVariable(line.front()) != -1)
         processVariable(line);
     else if(line[0] == "goto" || line[0][line[0].size()-1] == ':')
@@ -83,9 +85,9 @@ void Compiler::processLine(const std::vector<std::string>& line)
 void Compiler::processReturn(const std::vector<std::string>& line)
 {
     //Get ending function
-    if(functionStack.empty())
+    if(functionCallStack.empty())
         throw std::string("No function to escape from.");
-    Scope &ending = functionStack.back();
+    Scope &ending = functionCallStack.back();
     if(line.size() == 1 && ending.returnType != DataType::VOID) //If no return value is provided and the function is not nil
     {
         throw std::string("Expected return value, none given.");
@@ -98,12 +100,12 @@ void Compiler::processReturn(const std::vector<std::string>& line)
     //Evaluate the return type if any
     if(ending.returnType != DataType::VOID)
     {
-        evaluateBracket(line[1]);
+        evaluateBracket(parser.combineArguments(line, 1, line.size()-1));
         igen.genSetVariable((igen.getStackSize() - ending.stackSize) + 1);
     }
 
     igen.genGoto(0); //0 For now, will be filled in once function end point is known
-    functionEndGotos.emplace_back(std::make_pair(functionStack.size()-1, bytecode.size()-1));
+    functionEndGotos.emplace_back(std::make_pair(functionCallStack.size()-1, bytecode.size()-1));
 }
 
 void Compiler::processGoto(const std::vector<std::string> &line)
@@ -128,6 +130,18 @@ void Compiler::processGoto(const std::vector<std::string> &line)
         //Store the goto, excluding the colon at the end for the identifier
         gotos[line[0].substr(0, line[0].size()-1)] = bytecode.size();
     }
+}
+
+void Compiler::processClassDefinition(const std::vector<std::string>& line)
+{
+    expectedScopeType.reset();
+    expectedScopeType.identifier = line[1];
+    expectedScopeType.type == Scope::CLASS;
+}
+
+void Compiler::processClassMemberAccess(const std::vector<std::string>& line)
+{
+
 }
 
 void Compiler::processScope(const std::vector<std::string> &line)
@@ -156,7 +170,7 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 igen.push(Variable((*iter)[1], stringToDataType((*iter)[0])));
             }
             newScope.argumentCount = argumentNames.size();
-            functionStack.emplace_back(newScope);
+            functionCallStack.emplace_back(newScope);
         }
         openScopeStack.emplace_back(newScope);
         scopeDepth++;
@@ -241,11 +255,11 @@ void Compiler::processScope(const std::vector<std::string> &line)
                 else if(current.type == Scope::FUNCTION)
                 {
                     //Get scope to return to from function stack
-                    Scope endingScope = functionStack.back();
-                    functionStack.pop_back();
+                    Scope endingScope = functionCallStack.back();
+                    functionCallStack.pop_back();
 
                     //Set the function return gotos for this scope
-                    while(!functionEndGotos.empty() && functionEndGotos.back().first == functionStack.size())
+                    while(!functionEndGotos.empty() && functionEndGotos.back().first == functionCallStack.size())
                     {
                         bytecode[functionEndGotos.back().second] = bytecode.size();
                         functionEndGotos.pop_back();
@@ -272,7 +286,14 @@ void Compiler::processScope(const std::vector<std::string> &line)
 
                 //Store the scope in pastScopes and erase it from currentScopes as it's no longer open
                 current.endPos = bytecode.size();
-                pastScopes.emplace_back(*iter);
+                if(openScopeStack.size() > 1 && openScopeStack[openScopeStack.size()-2].type == Scope::CLASS) //If scope was created inside of a class, store in that class's past scope list
+                {
+                    openScopeStack[openScopeStack.size()-2].childMemberScopes.emplace_back(*iter);
+                }
+                else //Else store in the global past scope list
+                {
+                    pastScopes.emplace_back(*iter);
+                }
                 iter = openScopeStack.erase(iter);
                 break;
             }
@@ -438,6 +459,8 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
     DataType possibleType = stringToDataType(line[0]);
     if(possibleType == DataType::UNKNOWN && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
     {
+        std::cerr << "\nLine size: " << line.size() << std::endl;
+        std::cerr << "\n0: " << line[0] << std::endl;
         if(line[1] == "=") //If it's a set operation
         {
             //Evaluate the bracket containing what the variable should be set to
@@ -482,34 +505,44 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
     {
         //Convert its data type from string to enum
         DataType type = stringToDataType(line[0]);
-        if(line.size() > 2) //If there's a value provided (int a = 20)
+
+        if(!openScopeStack.empty() && openScopeStack.back().type == Scope::CLASS) //We're defining class members, so don't actually create them. Just register to the class.
         {
-            //Evaluate value to set it to and name the variable
-            evaluateBracket("(" + parser.combineArguments(line, 3, line.size() - 3) + ")");
-            igen.renameVariable(igen.getStackSize()-1, line[1]);
+            std::cout << "\nVar in class: " << line[1];
+            //NOTE TO SELF: ADD BRACKET INITIALISATION EVALUATION
+            pastScopes.back().childDataMembers.emplace_back(Variable(line[1], type));
         }
-        else //Else no default value provided (int a)
+        else //If we're not in a class, create the variables immediately
         {
-            //Give a default value based on its type
-            if(line[0] == "string")
+            if(line.size() > 2) //If there's a value provided (int a = 20)
             {
-                igen.genCreateString(line[1]);
+                //Evaluate value to set it to and name the variable
+                evaluateBracket("(" + parser.combineArguments(line, 3, line.size() - 3) + ")");
+                igen.renameVariable(igen.getStackSize()-1, line[1]);
             }
-            else if(line[0] == "int")
+            else //Else no default value provided (int a)
             {
-                igen.genCreateInt(line[1]);
-            }
-            else if(line[0] == "char")
-            {
-                igen.genCreateChar(line[1]);
-            }
-            else if(line[0] == "bool")
-            {
-                igen.genCreateBool(line[1]);
-            }
-            else if(line[0] == "auto")
-            {
-                throw std::string("Can't deduct type for auto as no initial value is provided");
+                //Give a default value based on its type
+                if(line[0] == "string")
+                {
+                    igen.genCreateString(line[1]);
+                }
+                else if(line[0] == "int")
+                {
+                    igen.genCreateInt(line[1]);
+                }
+                else if(line[0] == "char")
+                {
+                    igen.genCreateChar(line[1]);
+                }
+                else if(line[0] == "bool")
+                {
+                    igen.genCreateBool(line[1]);
+                }
+                else if(line[0] == "auto")
+                {
+                    throw std::string("Can't deduct type for auto as no initial value is provided");
+                }
             }
         }
     }
@@ -650,7 +683,7 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
                 //Call it with the provided arguments if any, not destroying the return value
                 processFunction({segment, arg}, false);
                 variablesOnStack++;
-                a++;
+
             }
             else //It's not a function
             {

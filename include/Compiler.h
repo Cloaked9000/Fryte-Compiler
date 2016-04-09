@@ -13,7 +13,6 @@
 #include "BytecodeIO.h"
 #include "VMTypes.h"
 #include "InstructionGenerator.h"
-#include "Class.h"
 
 class Compiler
 {
@@ -29,9 +28,9 @@ class Compiler
         std::vector<std::pair<unsigned int, unsigned int>> functionEndGotos; //Keep track of return gotos that still need to be set
         std::vector<Scope> openScopeStack; //Keeps track of open scopes
         std::vector<Scope> pastScopes; //Keep track of all past scopes
-        std::vector<Scope> functionStack; //Keeps track of function depth
+        std::vector<Scope> functionCallStack; //Keeps track of function depth
         std::vector<Scope> globalFunctions; //Keeps track of defined global functions
-        std::vector<Class> globalClasses; //Keeps track of all defined public classes
+        std::vector<Scope> globalClasses; //Keeps track of all defined public classes
         std::unordered_map<std::string, unsigned int> gotos; //Keeps track of created gotos. map<identifier, bytecodePos>
         int scopeDepth = 0; //Keeps track of current scope depth
         Scope expectedScopeType; //Keeps track of scopes
@@ -39,6 +38,10 @@ class Compiler
         unsigned int line; //Current line being compiled
 
         void validateArgumentCount(unsigned int expected, unsigned int got);
+
+        void processClassDefinition(const std::vector<std::string>& line);
+
+        void processClassMemberAccess(const std::vector<std::string>& line);
 
         void processReturn(const std::vector<std::string>& line);
 

@@ -1,6 +1,7 @@
 #include "Class.h"
 
-Class::Class()
+Class::Class(const std::string &name)
+: Variable(name, DataType::CLASS)
 {
     //ctor
 }

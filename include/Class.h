@@ -10,7 +10,7 @@ class Class : public Variable
 {
     public:
         /** Default constructor */
-        Class();
+        Class(const std::string &name);
         /** Default destructor */
         virtual ~Class();
     protected:

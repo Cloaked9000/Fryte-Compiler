@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cctype>
 
 #include "Parser.h"
 #include "BytecodeIO.h"
@@ -10,6 +11,7 @@ using namespace std;
 
 int main()
 {
+    Parser parser;
     std::vector<std::string> data;
     if(!BytecodeIO::readFile("file.txt", data))
         return -1;
