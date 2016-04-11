@@ -35,7 +35,7 @@ enum Instruction
     TO_INTEGER = 25, //Converts the value on the top of the stack to a string and pushes the new value
     TO_STRING = 26, //Converts the value on the top of the stack to an integer and then pushes the new value
     COMPARE_AND = 27, //Compares a series of values. If all are true, push true, else push false. COMPARE_AND(ArgCount, Args...)
-    DYNAMIC_CLONE_TOP = 28, //Takes an offset from the top of the stack and clones the variable at that offset to the top. DYNAMIC_CLONE_TOP(
+    DYNAMIC_CLONE_TOP = 28, //Takes an offset from the top of the stack and clones the variable at that offset to the top. DYNAMIC_CLONE_TOP(pos)
     DYNAMIC_SET_VARIABLE = 29, //Takes a variable position and variable value from the top of the stack and sets that variable to that value. DYNAMIC_SET_VARIABLE(VALUE, POSITION)
 };
 
@@ -57,14 +57,14 @@ struct Variable
 {
     DataType type;
     std::string identifier;
+    bool isArray;
+    unsigned int arrayLength;
 
     Variable()
-    : type(DataType::UNKNOWN), identifier("") {}
+    : type(DataType::UNKNOWN), identifier(""), isArray(false), arrayLength(0) {}
+
     Variable(const std::string &name, DataType varType)
-    {
-        identifier = name;
-        type = varType;
-    }
+    : type(varType), identifier(name), isArray(false), arrayLength(0) {}
 };
 
 static Instruction stringToInstruction(const std::string& operation)

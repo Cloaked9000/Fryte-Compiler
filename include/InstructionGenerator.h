@@ -44,6 +44,8 @@ class InstructionGenerator : public VirtualStack
         void genToInteger(); //wip
         void genToString(); //wip
         void genCreateDefaultValue(const std::string &identifier, DataType type);
+        void genDynamicSetVariable();
+        void genDynamicCloneTop();
     protected:
     private:
         std::vector<unsigned int> *bytecode;

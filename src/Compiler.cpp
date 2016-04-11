@@ -524,7 +524,33 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
             }
             else //Else no default value provided (int a)
             {
-                igen.genCreateDefaultValue(line[1], possibleType);
+                if(parser.isArrayDefinition(line[1])) //Check if it's an array definition
+                {
+                    //Split array definition into name and size
+                    std::string arrayName;
+                    std::string arraySize;
+                    parser.splitArrayDefinition(line[1], arrayName, arraySize);
+
+                    //Quick error check
+                    if(igen.isVariable(arraySize) > 0)
+                    {
+                        throw std::string("Arrays of a dynamic size are not currently supported sorry!");
+                    }
+                    unsigned int aSize = std::stoull(arraySize);
+                    if(aSize == 0)
+                        throw std::string("Array must not contain no elements");
+
+                    //Create first element with a name
+                    igen.genCreateDefaultValue(arrayName, possibleType);
+
+                    //All elements after are unnamed so that when searching for the array, the first element will always be returned
+                    for(unsigned int a = 0; a < aSize-1; a++)
+                        igen.genCreateDefaultValue("", possibleType);
+                }
+                else
+                {
+                    igen.genCreateDefaultValue(line[1], possibleType);
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 #include "VirtualStack.h"
 
 VirtualStack::VirtualStack()
+: errorDefault("", DataType::INT)
 {
     //ctor
     stackOffset = 0;
@@ -27,8 +28,13 @@ Variable VirtualStack::pop()
     return stack[--stackOffset];
 }
 
-int VirtualStack::isVariable(const std::string& identifier)
+int VirtualStack::isVariable(std::string identifier)
 {
+    if(parser.isArrayDefinition(identifier))
+    {
+        std::string tSize;
+        parser.splitArrayDefinition(identifier, identifier, tSize);
+    }
     for(unsigned int a = stackOffset; a-- > 0;)
     {
         if(stack[a].identifier == identifier)
@@ -47,10 +53,10 @@ void VirtualStack::resize(unsigned int newSize)
     stackOffset -= newSize;
 }
 
-Variable VirtualStack::getVariable(unsigned int stackPos)
+Variable &VirtualStack::getVariable(unsigned int stackPos)
 {
     if(stackPos >= stackOffset)
-        return Variable("", DataType::INT);
+        return errorDefault;
     return stack[getStackSize() - stackPos - 1];
 }
 

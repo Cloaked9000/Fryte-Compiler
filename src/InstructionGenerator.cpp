@@ -113,7 +113,49 @@ void InstructionGenerator::genCloneTop(const std::string &varName)
     if(varPos < 0)
         throw std::string("Undefined variable '" + varName + "'");
     else
-        genCloneTop(varPos);
+    {
+        if(parser.isArrayDefinition(varName)) //Check if the variable is an array to calculate element offset
+        {
+            //Split array definition into name and size
+            std::string arrayName;
+            std::string arrayIndex;
+            parser.splitArrayDefinition(varName, arrayName, arrayIndex);
+            if(isVariable(arrayIndex) != -1) //If array[n]
+            {
+                //Push array base position to stack
+                genCreateInt("", static_cast<unsigned int>(isVariable(arrayName)+1));
+
+                //Push index value to stack
+                genCloneTop(isVariable(arrayIndex));
+
+                //Subtract them to calculate offset
+                genMathSubtract(2);
+
+                //Dynamic clone top the calculated offset to the top
+                genDynamicCloneTop();
+            }
+            else //Else array[5]
+            {
+                //Get position of the array base
+                int varPos = isVariable(arrayName);
+
+                //Calculate element offset
+                varPos -= std::stoull(arrayIndex);
+
+                //Clone top the element at the calculated position
+                genCloneTop(varPos);
+            }
+        }
+        else
+        {
+            genCloneTop(varPos);
+        }
+    }
+}
+
+void InstructionGenerator::genDynamicCloneTop()
+{
+    bytecode->emplace_back(Instruction::DYNAMIC_CLONE_TOP);
 }
 
 void InstructionGenerator::genCloneTop(int pos)
@@ -150,7 +192,44 @@ void InstructionGenerator::genConditionalIf(unsigned int skipToPos)
 
 void InstructionGenerator::genSetVariable(const std::string &varName)
 {
-    genSetVariable(isVariable(varName));
+    if(parser.isArrayDefinition(varName)) //Check if the variable is an array to calculate element offset
+    {
+        //Split array definition into name and size
+        std::string arrayName;
+        std::string arrayIndex;
+        parser.splitArrayDefinition(varName, arrayName, arrayIndex);
+        if(isVariable(arrayIndex) > 0) //If array[n]
+        {
+            //Push array base position to stack
+            genCreateInt("", static_cast<unsigned int>(isVariable(arrayName)));
+
+            //Push index value to stack
+            genCloneTop(isVariable(arrayIndex));
+
+            //Subtract them to calculate offset
+            genMathSubtract(2);
+
+            //Dynamically set the variable at this position
+            genDynamicSetVariable();
+        }
+        else //Else array[5]
+        {
+            int varPos = isVariable(arrayName);
+            varPos -= std::stoull(arrayIndex);
+            genSetVariable(varPos);
+        }
+    }
+    else //Not an array, get variable position the usual way
+    {
+        genSetVariable(isVariable(varName));
+    }
+}
+
+void InstructionGenerator::genDynamicSetVariable()
+{
+    bytecode->emplace_back(Instruction::DYNAMIC_SET_VARIABLE);
+    pop();
+    pop();
 }
 
 void InstructionGenerator::genSetVariable(int offset)

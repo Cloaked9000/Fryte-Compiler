@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "VMTypes.h"
+#include "Parser.h"
 
 class VirtualStack
 {
@@ -14,9 +15,9 @@ class VirtualStack
         virtual ~VirtualStack();
 
         unsigned int getStackSize();
-        Variable getVariable(unsigned int stackPos);
+        Variable &getVariable(unsigned int stackPos);
 
-        int isVariable(const std::string &identifier);
+        int isVariable(std::string identifier);
         void renameVariable(unsigned int stackPos, const std::string &identifier);
 
         void resize(unsigned int newSize);
@@ -27,6 +28,8 @@ class VirtualStack
         const static int maxStackSize = 500;
         Variable stack[maxStackSize];
         unsigned int stackOffset;
+        Variable errorDefault;
+        Parser parser;
 };
 
 #endif // VIRTUALSTACK_H

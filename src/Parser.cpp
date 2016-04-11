@@ -337,7 +337,7 @@ bool Parser::isArrayDefinition(const std::string& data)
     return (data.find('[') != std::string::npos);
 }
 
-void Parser::splitArrayDefinition(const std::string &data_in, std::string &arrayName_out, std::string &arraySize_out)
+void Parser::splitArrayDefinition(std::string data_in, std::string &arrayName_out, std::string &arraySize_out)
 {
     size_t beg = data_in.find('[');
     if(beg != std::string::npos)
@@ -346,7 +346,7 @@ void Parser::splitArrayDefinition(const std::string &data_in, std::string &array
         if(fin != std::string::npos)
         {
             arrayName_out = data_in.substr(0, beg);
-            arraySize_out = data_in.substr(beg + 1, fin - data_in.size() - 1);
+            arraySize_out = data_in.substr(beg + 1, fin - beg - 1);
         }
     }
 }
