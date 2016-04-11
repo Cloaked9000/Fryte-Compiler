@@ -20,6 +20,8 @@ class Parser
         void processEscapeSequences(std::string &data); //Replace things like '\n' with the newline character
         std::vector<std::string> extractBracketArguments(std::string data); //Extracts comma separated arguments out of a bracket
         std::string combineArguments(const std::vector<std::string> &args, unsigned int first, unsigned int count); //As arguments can be split over several vector elements, they need to be put together before being evaluated
+        bool isArrayDefinition(const std::string &data); //If the given string is an array definition (array[]), return true. False otherwise.
+        void splitArrayDefinition(const std::string &data_in, std::string &arrayName_out, std::string &arraySize_out); //Split an array (bob[i]) into 'bob' and 'i'
     protected:
     private:
         void replaceAll(std::string &data, const std::string &from, const std::string &to); //Replaces all instances of a string with another

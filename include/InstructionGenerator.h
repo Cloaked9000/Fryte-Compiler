@@ -6,6 +6,7 @@
 
 #include "VirtualStack.h"
 #include "VMTypes.h"
+#include "Parser.h"
 
 class InstructionGenerator : public VirtualStack
 {
@@ -46,6 +47,7 @@ class InstructionGenerator : public VirtualStack
     protected:
     private:
         std::vector<unsigned int> *bytecode;
+        Parser parser;
 };
 
 #endif // INSTRUCTIONGENERATOR_H

@@ -1,9 +1,9 @@
 #include "Parser.h"
 
 Parser::Parser()
+: seperatorTokens{' ', '.', ',', '"', '('}
 {
     //ctor
-    seperatorTokens = {' ', '.', ',', '"', '('};
 }
 
 Parser::~Parser()
@@ -330,4 +330,23 @@ std::string Parser::combineArguments(const std::vector<std::string>& args, unsig
         rv += (args[first + a] + " ");
     rv.erase(rv.size()-1, 1);
     return rv;
+}
+
+bool Parser::isArrayDefinition(const std::string& data)
+{
+    return (data.find('[') != std::string::npos);
+}
+
+void Parser::splitArrayDefinition(const std::string &data_in, std::string &arrayName_out, std::string &arraySize_out)
+{
+    size_t beg = data_in.find('[');
+    if(beg != std::string::npos)
+    {
+        size_t fin = data_in.find(']');
+        if(fin != std::string::npos)
+        {
+            arrayName_out = data_in.substr(0, beg);
+            arraySize_out = data_in.substr(beg + 1, fin - data_in.size() - 1);
+        }
+    }
 }
