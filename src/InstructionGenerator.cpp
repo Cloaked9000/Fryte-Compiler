@@ -13,6 +13,7 @@ InstructionGenerator::~InstructionGenerator()
 
 void InstructionGenerator::genConsoleOut(unsigned int argCount)
 {
+    std::cout << "\nConsole out count: " << argCount;
     bytecode->emplace_back(Instruction::CONSOLE_OUT);
     bytecode->emplace_back(argCount);
     for(unsigned int a = 0; a < argCount; a++)

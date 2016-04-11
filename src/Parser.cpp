@@ -104,7 +104,7 @@ std::string Parser::bracketOperatorFix(const std::string &data)
         }
 
         //If we're exiting a bracket, update the layer and insert a space followed by this layer's operator
-        else if(!isQuoteOpen && data[a] == ')')
+        else if(!isQuoteOpen && (data[a] == ')' || data[a] == ','))
         {
             if(!bracketOperators[currentLayer].empty()) //Only add operator to the end if there is one
             {
@@ -112,7 +112,10 @@ std::string Parser::bracketOperatorFix(const std::string &data)
                 returnValue += bracketOperators[currentLayer];
             }
             returnValue += data[a];
-            currentLayer--;
+            if(data[a] == ')')
+                currentLayer--;
+            else
+                bracketOperators[currentLayer].clear();
         }
 
         //Else if dual-character operator. Temporary fix.

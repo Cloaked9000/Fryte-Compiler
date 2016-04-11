@@ -136,7 +136,7 @@ void Compiler::processClassDefinition(const std::vector<std::string>& line)
 {
     expectedScopeType.reset();
     expectedScopeType.identifier = line[1];
-    expectedScopeType.type == Scope::CLASS;
+    expectedScopeType.type = Scope::CLASS;
 }
 
 void Compiler::processClassMemberAccess(const std::vector<std::string>& line)
@@ -414,7 +414,7 @@ void Compiler::processFunction(const std::vector<std::string>& line, bool destro
         if(line[1] == "entry")
             bytecode[1] = bytecode.size();
     }
-    else
+    else //Else if we're calling a function
     {
         Scope *scope = getPastScope(line[0]);
         if(scope == nullptr)
@@ -459,8 +459,6 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
     DataType possibleType = stringToDataType(line[0]);
     if(possibleType == DataType::UNKNOWN && line[0] != "auto") //If we're not creating a new variable (eg a = 20)
     {
-        std::cerr << "\nLine size: " << line.size() << std::endl;
-        std::cerr << "\n0: " << line[0] << std::endl;
         if(line[1] == "=") //If it's a set operation
         {
             //Evaluate the bracket containing what the variable should be set to
@@ -496,6 +494,10 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
             {
                 igen.genMathSubtract(2);
             }
+            else if(line[1] == "@=")
+            {
+                igen.genConcentrateStrings(2);
+            }
         }
 
         //Set the variable to the last thing on the stack
@@ -522,27 +524,7 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
             }
             else //Else no default value provided (int a)
             {
-                //Give a default value based on its type
-                if(line[0] == "string")
-                {
-                    igen.genCreateString(line[1]);
-                }
-                else if(line[0] == "int")
-                {
-                    igen.genCreateInt(line[1]);
-                }
-                else if(line[0] == "char")
-                {
-                    igen.genCreateChar(line[1]);
-                }
-                else if(line[0] == "bool")
-                {
-                    igen.genCreateBool(line[1]);
-                }
-                else if(line[0] == "auto")
-                {
-                    throw std::string("Can't deduct type for auto as no initial value is provided");
-                }
+                igen.genCreateDefaultValue(line[1], possibleType);
             }
         }
     }
@@ -683,7 +665,7 @@ unsigned int Compiler::evaluateBracket(std::string originalLine)
                 //Call it with the provided arguments if any, not destroying the return value
                 processFunction({segment, arg}, false);
                 variablesOnStack++;
-
+                a++;
             }
             else //It's not a function
             {
