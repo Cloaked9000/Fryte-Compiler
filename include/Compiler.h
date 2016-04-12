@@ -19,7 +19,7 @@ class Compiler
     public:
         Compiler();
         virtual ~Compiler();
-        bool compile(std::vector<std::string> &data);
+        bool compile(std::vector<std::string> &data, std::vector<unsigned int> &output);
     protected:
     private:
         Parser parser;

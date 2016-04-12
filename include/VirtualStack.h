@@ -25,7 +25,7 @@ class VirtualStack
         Variable pop();
     protected:
     private:
-        const static int maxStackSize = 500;
+        const static int maxStackSize = 30000;
         Variable stack[maxStackSize];
         unsigned int stackOffset;
         Variable errorDefault;

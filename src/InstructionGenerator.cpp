@@ -198,7 +198,7 @@ void InstructionGenerator::genSetVariable(const std::string &varName)
         std::string arrayName;
         std::string arrayIndex;
         parser.splitArrayDefinition(varName, arrayName, arrayIndex);
-        if(isVariable(arrayIndex) > 0) //If array[n]
+        if(isVariable(arrayIndex) != -1) //If array[n]
         {
             //Push array base position to stack
             genCreateInt("", static_cast<unsigned int>(isVariable(arrayName)));

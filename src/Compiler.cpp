@@ -11,7 +11,7 @@ Compiler::~Compiler()
     //dtor
 }
 
-bool Compiler::compile(std::vector<std::string> &data)
+bool Compiler::compile(std::vector<std::string> &data, std::vector<unsigned int> &output)
 {
     //Write the entry point goto. Will be overwritten if 'entry' is defined. 2 to skip over the goto.
     igen.genGoto(2);
@@ -42,8 +42,8 @@ bool Compiler::compile(std::vector<std::string> &data)
         }
     }
 
-    //Save to file
-    BytecodeIO::writeBytecode("out.fry", bytecode);
+    //Store result
+    output = bytecode;
     return true;
 }
 
