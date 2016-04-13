@@ -1,7 +1,7 @@
 #include "Compiler.h"
 
 Compiler::Compiler()
-: igen(&bytecode)
+: igen(&bytecode, this)
 {
     //ctor
 }

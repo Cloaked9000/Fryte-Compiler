@@ -8,10 +8,11 @@
 #include "VMTypes.h"
 #include "Parser.h"
 
+class Compiler;
 class InstructionGenerator : public VirtualStack
 {
     public:
-        InstructionGenerator(std::vector<unsigned int> *bytecodeOut);
+        InstructionGenerator(std::vector<unsigned int> *bytecodeOut, Compiler *compiler);
         virtual ~InstructionGenerator();
         void genConsoleOut(unsigned int argCount);
         void genConsoleIn(const std::string &varDest);
@@ -50,6 +51,7 @@ class InstructionGenerator : public VirtualStack
     private:
         std::vector<unsigned int> *bytecode;
         Parser parser;
+        Compiler *compiler;
 };
 
 #endif // INSTRUCTIONGENERATOR_H

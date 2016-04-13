@@ -20,6 +20,7 @@ void Parser::tokenizeFile(const std::vector<std::string>& data_in, std::vector<s
         std::string lineBuffer = "";
         bool isQuotationOpen = false;
         bool isBracketOpen = false;
+        int squareBracketDepth = 0;
         unsigned int bracketDepth = 0;
         for(const auto &c : line) //Iterate through each character in each line
         {
@@ -42,7 +43,11 @@ void Parser::tokenizeFile(const std::vector<std::string>& data_in, std::vector<s
                     if(bracketDepth == 0)
                         isBracketOpen = false;
                 }
-                if(!isQuotationOpen && c == seperatorTokens[a] && !isBracketOpen) //If it is, store the buffered word
+                else if(c == '[')
+                    squareBracketDepth++;
+                else if(c == ']')
+                    squareBracketDepth--;
+                if(!isQuotationOpen && c == seperatorTokens[a] && !isBracketOpen && squareBracketDepth == 0) //If it is, store the buffered word
                 {
                     if(!lineBuffer.empty())
                         currentLine.emplace_back(lineBuffer);

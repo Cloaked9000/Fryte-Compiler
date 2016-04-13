@@ -22,6 +22,7 @@ class Compiler
         bool compile(std::vector<std::string> &data, std::vector<unsigned int> &output);
     protected:
     private:
+        friend InstructionGenerator;
         Parser parser;
         InstructionGenerator igen;
         std::vector<unsigned int> bytecode; //Keeps track of bytecode to write to file

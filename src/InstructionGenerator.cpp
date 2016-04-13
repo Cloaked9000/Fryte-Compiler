@@ -1,7 +1,8 @@
 #include "InstructionGenerator.h"
+#include "Compiler.h"
 
-InstructionGenerator::InstructionGenerator(std::vector<unsigned int> *bytecodeOut)
-: bytecode(bytecodeOut)
+InstructionGenerator::InstructionGenerator(std::vector<unsigned int> *bytecodeOut, Compiler *tcomp)
+: bytecode(bytecodeOut), compiler(tcomp)
 {
     //ctor
 }
@@ -198,26 +199,18 @@ void InstructionGenerator::genSetVariable(const std::string &varName)
         std::string arrayName;
         std::string arrayIndex;
         parser.splitArrayDefinition(varName, arrayName, arrayIndex);
-        if(isVariable(arrayIndex) != -1) //If array[n]
-        {
-            //Push array base position to stack
-            genCreateInt("", static_cast<unsigned int>(isVariable(arrayName)));
 
-            //Push index value to stack
-            genCloneTop(isVariable(arrayIndex));
+        //Push array base position to stack
+        genCreateInt("", static_cast<unsigned int>(isVariable(arrayName)));
 
-            //Subtract them to calculate offset
-            genMathSubtract(2);
+        //Push index value to stack
+        compiler->evaluateBracket("(" + arrayIndex + ")");
 
-            //Dynamically set the variable at this position
-            genDynamicSetVariable();
-        }
-        else //Else array[5]
-        {
-            int varPos = isVariable(arrayName);
-            varPos -= std::stoull(arrayIndex);
-            genSetVariable(varPos);
-        }
+        //Subtract them to calculate offset
+        genMathSubtract(2);
+
+        //Dynamically set the variable at this position
+        genDynamicSetVariable();
     }
     else //Not an array, get variable position the usual way
     {
