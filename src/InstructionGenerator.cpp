@@ -121,35 +121,34 @@ void InstructionGenerator::genCloneTop(const std::string &varName)
             std::string arrayName;
             std::string arrayIndex;
             parser.splitArrayDefinition(varName, arrayName, arrayIndex);
-            if(isVariable(arrayIndex) != -1) //If array[n]
+
+            //Push array base position to stack
+            genCreateInt("", static_cast<unsigned int>(isVariable(arrayName)+1));
+
+            //Push index value to stack
+            compiler->evaluateBracket("(" + arrayIndex + ")");
+
+            //Subtract them to calculate offset
+            genMathSubtract(2);
+
+            //Dynamic clone top the calculated offset to the top
+            genDynamicCloneTop();
+        }
+        else //Else if not an array element
+        {
+            //Check if we're moving a whole array
+            Variable &var = getVariable(varPos);
+            if(var.isArray) //We're moving a whole array
             {
-                //Push array base position to stack
-                genCreateInt("", static_cast<unsigned int>(isVariable(arrayName)+1));
-
-                //Push index value to stack
-                genCloneTop(isVariable(arrayIndex));
-
-                //Subtract them to calculate offset
-                genMathSubtract(2);
-
-                //Dynamic clone top the calculated offset to the top
-                genDynamicCloneTop();
+                for(unsigned int a = 0; a < var.arrayLength; a++)
+                {
+                    genCloneTop(varPos); //We can keep using varPos repeatedly as the offset of the next variable is changed by pushing more things to the stack
+                }
             }
-            else //Else array[5]
+            else //We're moving a single variable
             {
-                //Get position of the array base
-                int varPos = isVariable(arrayName);
-
-                //Calculate element offset
-                varPos -= std::stoull(arrayIndex);
-
-                //Clone top the element at the calculated position
                 genCloneTop(varPos);
             }
-        }
-        else
-        {
-            genCloneTop(varPos);
         }
     }
 }
@@ -209,7 +208,7 @@ void InstructionGenerator::genSetVariable(const std::string &varName)
         //Subtract them to calculate offset
         genMathSubtract(2);
 
-        //Dynamically set the variable at this position
+        //Dynamically set the variable at this positio
         genDynamicSetVariable();
     }
     else //Not an array, get variable position the usual way
@@ -333,5 +332,29 @@ void InstructionGenerator::genCreateDefaultValue(const std::string &identifier, 
     default:
         throw std::string("Unknown type passed to pushDefaultType!");
     }
+}
+
+void InstructionGenerator::genCreateArray(const std::string& identifier, const std::string& arraySize, DataType type)
+{
+    //Quick error check
+    if(isVariable(arraySize) > 0)
+    {
+        throw std::string("Arrays of a dynamic size are not currently supported sorry!");
+    }
+    unsigned int aSize = std::stoull(arraySize);
+    if(aSize == 0)
+        throw std::string("Array must not contain no elements");
+
+    //Create first element with a name
+    genCreateDefaultValue(identifier, type);
+
+    //Set it to an array
+    Variable &var = getVariable(getStackSize()-1);
+    var.isArray = true;
+    var.arrayLength = aSize;
+
+    //All elements after are unnamed so that when searching for the array, the first element will always be returned
+    for(unsigned int a = 0; a < aSize-1; a++)
+        genCreateDefaultValue("", type);
 }
 

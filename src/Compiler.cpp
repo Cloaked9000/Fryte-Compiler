@@ -167,7 +167,40 @@ void Compiler::processScope(const std::vector<std::string> &line)
             parser.tokenizeFile(parser.extractBracketArguments(newScope.incrementor), argumentNames);
             for(auto iter = argumentNames.rbegin(); iter != argumentNames.rend(); iter++)
             {
-                igen.push(Variable((*iter)[1], stringToDataType((*iter)[0])));
+                DataType type = stringToDataType((*iter)[0]);
+                std::string &identifier = (*iter)[1];
+                if(parser.isArrayDefinition(identifier)) //Check if it's an array
+                {
+                    //Split array definition into name and size
+                    std::string arrayName;
+                    std::string arraySize;
+                    parser.splitArrayDefinition(identifier, arrayName, arraySize);
+
+                    //Quick error check
+                    if(igen.isVariable(arraySize) > 0)
+                        throw std::string("Arrays of a dynamic size are not currently supported sorry!");
+
+                    //Get array size as an integer
+                    unsigned int aSize = std::stoull(arraySize);
+                    if(aSize == 0)
+                        throw std::string("Array must not contain no elements");
+
+                    //Create first element with a name
+                    igen.push(Variable(arrayName, type));
+
+                    //Set it to an array
+                    Variable &var = igen.getVariable(igen.getStackSize()-1);
+                    var.isArray = true;
+                    var.arrayLength = aSize;
+
+                    //All elements after are unnamed so that when searching for the array, the first element will always be returned
+                    for(unsigned int a = 0; a < aSize-1; a++)
+                        igen.push(Variable("", type));
+                }
+                else //Else normal variable
+                {
+                    igen.push(Variable(identifier, type));
+                }
             }
             newScope.argumentCount = argumentNames.size();
             functionCallStack.emplace_back(newScope);
@@ -531,26 +564,8 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
                     std::string arraySize;
                     parser.splitArrayDefinition(line[1], arrayName, arraySize);
 
-                    //Quick error check
-                    if(igen.isVariable(arraySize) > 0)
-                    {
-                        throw std::string("Arrays of a dynamic size are not currently supported sorry!");
-                    }
-                    unsigned int aSize = std::stoull(arraySize);
-                    if(aSize == 0)
-                        throw std::string("Array must not contain no elements");
-
-                    //Create first element with a name
-                    igen.genCreateDefaultValue(arrayName, possibleType);
-
-                    //Set it to an array
-                    Variable &var = igen.getVariable(igen.getStackSize()-1);
-                    var.isArray = true;
-                    var.arrayLength = aSize;
-
-                    //All elements after are unnamed so that when searching for the array, the first element will always be returned
-                    for(unsigned int a = 0; a < aSize-1; a++)
-                        igen.genCreateDefaultValue("", possibleType);
+                    //Create the array
+                    igen.genCreateArray(arrayName, arraySize, possibleType);
                 }
                 else
                 {
