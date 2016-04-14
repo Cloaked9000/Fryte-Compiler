@@ -543,6 +543,11 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
                     //Create first element with a name
                     igen.genCreateDefaultValue(arrayName, possibleType);
 
+                    //Set it to an array
+                    Variable &var = igen.getVariable(igen.getStackSize()-1);
+                    var.isArray = true;
+                    var.arrayLength = aSize;
+
                     //All elements after are unnamed so that when searching for the array, the first element will always be returned
                     for(unsigned int a = 0; a < aSize-1; a++)
                         igen.genCreateDefaultValue("", possibleType);
