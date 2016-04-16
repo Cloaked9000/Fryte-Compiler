@@ -22,6 +22,7 @@ Declaring/initialising/setting/using variables.
 
 Functions with arguments and return statements which can return values
 
+Statically sized arrays of all data types
 
 # Sample program
 
