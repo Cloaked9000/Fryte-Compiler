@@ -1,7 +1,7 @@
 #include "Parser.h"
 
 Parser::Parser()
-: seperatorTokens{' ', '.', ',', '"', '('}
+: seperatorTokens{' ', '.', ',', '"', '('}, spacingTokens{"+", "-", "*", "/", "%", "|", "&", "<", ">", "=", "!", "@"}
 {
     //ctor
 }
@@ -11,10 +11,43 @@ Parser::~Parser()
     //dtor
 }
 
+void Parser::fixSpacing(std::string& data)
+{
+    //Adds spaces around groups of spacing tokens if a space doesn't exist. Example: "a+a" becomes "a + a", and "a+=1" becomes "a += 1"
+    if(data.empty())
+        return;
+    bool isQuoteOpen = false;
+    for(size_t a = 1; a < data.size()-1; a++)
+    {
+        if(data[a] == '"')
+            isQuoteOpen = !isQuoteOpen;
+
+        if(!isQuoteOpen)
+        {
+            auto findPos = std::find(spacingTokens.begin(), spacingTokens.end(), std::string(1, data[a]));
+            if(findPos != spacingTokens.end()) //Current character is a spacing token
+            {
+                //Check that last character is not a token or space
+                if(std::find(spacingTokens.begin(), spacingTokens.end(), std::string(1, data[a + 1])) == spacingTokens.end() && std::string(1, data[a + 1]) != " ")
+                {
+                    data.insert(a + 1, " ");
+                }
+
+                //Check that the preceding character is not a token or space
+                if(std::find(spacingTokens.begin(), spacingTokens.end(), std::string(1, data[a - 1])) == spacingTokens.end() && std::string(1, data[a - 1]) != " ")
+                {
+                    data.insert(a, " ");
+                }
+            }
+        }
+    }
+}
+
 void Parser::tokenizeFile(const std::vector<std::string>& data_in, std::vector<std::vector<std::string>>& data_out)
 {
-    for(const auto &line : data_in) //Iterate through each line
+    for(auto line : data_in) //Iterate through each line
     {
+        fixSpacing(line);
         data_out.emplace_back(std::vector<std::string>());
         std::vector<std::string> &currentLine = data_out.back();
         std::string lineBuffer = "";

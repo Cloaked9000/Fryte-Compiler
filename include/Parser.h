@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <algorithm>
 #include <utility>
 
 #include "VMTypes.h"
@@ -22,10 +23,12 @@ class Parser
         std::string combineArguments(const std::vector<std::string> &args, unsigned int first, unsigned int count); //As arguments can be split over several vector elements, they need to be put together before being evaluated
         bool isArrayDefinition(const std::string &data); //If the given string is an array definition (array[]), return true. False otherwise.
         void splitArrayDefinition(std::string data_in, std::string &arrayName_out, std::string &arraySize_out); //Split an array (bob[i]) into 'bob' and 'i'
+        void fixSpacing(std::string &data); //Replaces things like (1+1) with (1 + 1)
     protected:
     private:
         void replaceAll(std::string &data, const std::string &from, const std::string &to); //Replaces all instances of a string with another
         std::vector<unsigned char> seperatorTokens;
+        std::vector<std::string> spacingTokens;
 };
 
 #endif // PARSER_H
