@@ -551,9 +551,52 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
         {
             if(line.size() > 2) //If there's a value provided (int a = 20)
             {
-                //Evaluate value to set it to and name the variable
-                evaluateBracket("(" + parser.combineArguments(line, 3, line.size() - 3) + ")");
-                igen.renameVariable(igen.getStackSize()-1, line[1]);
+                if(parser.isArrayDefinition(line[1])) //Check if it's an array definition
+                {
+                    //Flip argument list for left->right parsing
+                    std::vector<std::string> &&arguments = parser.extractBracketArguments(parser.combineArguments(line, 3, line.size() - 3));
+                    std::reverse(arguments.begin(), arguments.end());
+                    std::string args;
+                    for(unsigned int a = 0; a < arguments.size(); a++)
+                    {
+                        args += arguments[a];
+                        if(a != arguments.size()-1)
+                            args += ", ";
+                    }
+
+                    //Evaluate value to set it to and name the variable
+                    unsigned int stackSizePrior = igen.getStackSize();
+                    std::cout << "\nEvaluating: " << args << std::endl;
+                    evaluateBracket(args);
+                    unsigned int stackSizeAfter = igen.getStackSize();
+
+                    //Split array definition into name and size
+                    std::string arrayName;
+                    std::string arraySize;
+                    parser.splitArrayDefinition(line[1], arrayName, arraySize);
+                    unsigned int arraySizeCasted = std::stoull(arraySize);
+
+                    if(arraySizeCasted != stackSizeAfter - stackSizePrior)
+                    {
+                        throw std::string("Invalid array initialiser arguments. Got " + std::to_string(stackSizeAfter - stackSizePrior) + ", expected " + arraySize);
+                    }
+
+                    //Name the created variables compiler side
+                    igen.renameVariable(igen.getStackSize() - arraySizeCasted, arrayName);
+                    Variable &var = igen.getVariable(igen.isVariable(arrayName));
+                    var.arrayLength = arraySizeCasted;
+                    var.isArray = true;
+                }
+                else
+                {
+                    //Evaluate value to set it to and name the variable
+                    unsigned int stackSizePrior = igen.getStackSize();
+                    evaluateBracket(parser.combineArguments(line, 3, line.size() - 3));
+                    unsigned int stackSizeAfter = igen.getStackSize();
+
+                    //Rename variable compiler side
+                    igen.renameVariable(igen.getStackSize()-1, line[1]);
+                }
             }
             else //Else no default value provided (int a)
             {
