@@ -566,7 +566,7 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
 
                     //Evaluate value to set it to and name the variable
                     unsigned int stackSizePrior = igen.getStackSize();
-                    std::cout << "\nEvaluating: " << args << std::endl;
+
                     evaluateBracket(args);
                     unsigned int stackSizeAfter = igen.getStackSize();
 
@@ -574,7 +574,19 @@ void Compiler::processVariable(const std::vector<std::string>& line) //things li
                     std::string arrayName;
                     std::string arraySize;
                     parser.splitArrayDefinition(line[1], arrayName, arraySize);
-                    unsigned int arraySizeCasted = std::stoull(arraySize);
+
+                    //Find how large to make it. Pick the size specified in the brackets if it's there, otherwise the number of elements in the initialiser list
+                    unsigned int arraySizeCasted = 0;
+                    if(!arraySize.empty())
+                        arraySizeCasted = std::stoull(arraySize);
+                    else
+                        arraySizeCasted = (unsigned int)arguments.size();
+
+                    //Check that the number of arguments in the initialiser list is smaller than the array size
+                    if(arraySizeCasted < arguments.size())
+                    {
+                        throw std::string("Array initialiser contains too many elements for the array to hold. Array size: " + std::to_string(arraySizeCasted) + ". List size: " + std::to_string(arguments.size()));
+                    }
 
                     if(arraySizeCasted != stackSizeAfter - stackSizePrior)
                     {
