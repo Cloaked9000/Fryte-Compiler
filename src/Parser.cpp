@@ -1,7 +1,7 @@
 #include "Parser.h"
 
 Parser::Parser()
-: seperatorTokens{' ', '.', ',', '"', '('}, spacingTokens{"+", "-", "*", "/", "%", "|", "&", "<", ">", "=", "!", "@"}
+: seperatorTokens{' ', '\t', '.', ',', '"', '('}, spacingTokens{"+", "-", "*", "/", "%", "|", "&", "<", ">", "=", "!", "@"}
 {
     //ctor
 }
